@@ -4,11 +4,11 @@ extern crate libc;
 extern crate llvm_sys;
 
 #[macro_use]
-mod macros;
-mod block;
-mod buffer;
-mod builder;
-mod util;
+pub mod macros;
+pub mod block;
+pub mod buffer;
+pub mod builder;
+pub mod util;
 pub mod types;
 pub mod value;
 
