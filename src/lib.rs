@@ -369,7 +369,7 @@ impl JitCompiler {
   }
   
   /// Maps a global to a specific memory location.
-  pub unsafe fn add_global_mapping<T, V: LLVMRef<LLVMValueRef>>(&self, global: &V, addr: *const T) 
+  pub unsafe fn add_global_mapping<T>(&self, global: &Value, addr: *const T) 
   {
     LLVMAddGlobalMapping(self.ee, global.as_ref(), mem::transmute(addr));
   }

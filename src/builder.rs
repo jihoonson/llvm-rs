@@ -9,6 +9,7 @@ use llvm_sys::prelude::{
 };
 use libc::{c_char, c_uint};
 
+use super::LLVMRef;
 use types::Ty;
 use block::BasicBlock;
 use value::{Function, Value, ValueRef, Predicate, PhiNode};
@@ -169,7 +170,8 @@ impl Builder {
   /// Build an instruction that calls the function `func` with the arguments `args`.
   ///
   /// This will return the return value of the function.  
-  fn create_call_internal(&self, func: &Function, args: &[&Value], tail_call: bool) -> Value 
+  fn create_call_internal<V: LLVMRef<LLVMValueRef>>(&self, func: &Function, args: &[&V], 
+                                                    tail_call: bool) -> Value 
   {
     let ref_array = to_llvmref_array!(args, LLVMValueRef);
     
@@ -195,7 +197,7 @@ impl Builder {
   /// Build an instruction that calls the function `func` with the arguments `args`.
   ///
   /// This will return the return value of the function.
-  pub fn create_tail_call(&self, func: &Function, args: &[&Value]) -> Value 
+  pub fn create_tail_call<V: LLVMRef<LLVMValueRef>>(&self, func: &Function, args: &[&V]) -> Value 
   {
     self.create_call_internal(func, args, true)
   }

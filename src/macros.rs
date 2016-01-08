@@ -6,6 +6,13 @@ macro_rules! llvm_ret(
       Err(::util::chars::to_str($err).to_string())
     }
   );
+  ($ret:expr, $err_msg:expr) => (
+    if $ret == 0 {
+      Ok(())
+    } else {
+      Err($err_msg.to_string())
+    }
+  );  
 );
 
 macro_rules! expect_noerr(
@@ -110,7 +117,7 @@ macro_rules! impl_display(
 
 macro_rules! to_llvmref_array(
   ($e:expr, $t:ty) => (
-    $e.iter().map(|x| x.0).collect::<Vec<$t>>()
+    $e.iter().map(|x| x.as_ref()).collect::<Vec<$t>>()
   );
 );
   
