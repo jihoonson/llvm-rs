@@ -3,6 +3,7 @@ use std::fmt;
 use std::mem;
 
 use libc::{c_char, c_int, c_uint, c_ulonglong};
+use llvm_sys::analysis;
 use llvm_sys::core;
 use llvm_sys::LLVMAttribute;
 use llvm_sys::prelude::{
@@ -354,6 +355,16 @@ impl Function {
   pub fn remove_attribute(&self, attr: Attribute) 
   {
     unsafe { core::LLVMRemoveFunctionAttr(self.into(), attr.into()) }
+  }
+  
+  pub fn verify(&self) -> Result<(), String>
+  {
+    unsafe {      
+      let action = analysis::LLVMVerifierFailureAction::LLVMReturnStatusAction;
+      let ret = analysis::LLVMVerifyFunction(self.0, action);
+      
+      llvm_ret!(ret, "function is not valid")
+    }
   }
 }
 
