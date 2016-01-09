@@ -5,7 +5,7 @@ pub trait HasContext {
 }
 
 #[inline]
-pub fn ret_nullable_ptr<P, T>(ptr: *mut P) -> Option<T> where T:From<*mut P> 
+pub fn ret_nullable_ptr<P, T>(ptr: *mut P) -> Option<T> where T:From<*mut P>
 {
   if ptr.is_null() {
     None
@@ -31,7 +31,7 @@ pub mod chars {
       ::std::str::from_utf8_unchecked(bytes)
     }
   }
-  
+
   #[allow(dead_code)]
   pub fn to_nullable_str<'a>(chars: *const c_char) -> Option<&'a str> {
     unsafe {

@@ -21,57 +21,57 @@ impl_has_context!(Ty, LLVMGetTypeContext);
 impl Ty {
   #[inline(always)]
   pub fn as_ptr(&self) -> LLVMTypeRef { self.0 }
-  
+
   #[inline(always)]
-  pub fn void_ty<'a>(ctx: LLVMContextRef) -> Ty 
+  pub fn void_ty<'a>(ctx: LLVMContextRef) -> Ty
   {
   	Ty(unsafe { core::LLVMVoidTypeInContext(ctx) })
   }
-  
+
   /// Returns true if the size of the type is known at compile-time.
   ///
   /// This is equivalent to the type implementing `Sized` in Rust
   #[inline(always)]
-  pub fn is_sized(&self) -> bool 
+  pub fn is_sized(&self) -> bool
   {
     unsafe { core::LLVMTypeIsSized(self.into()) != 0 }
   }
-  
+
   /// Returns true if this type is a function.
   #[inline(always)]
-  pub fn is_func_ty(&self) -> bool 
+  pub fn is_func_ty(&self) -> bool
   {
     let kind = unsafe { core::LLVMGetTypeKind(self.into()) };
     kind as c_uint == LLVMTypeKind::LLVMFunctionTypeKind as c_uint
   }
-  
+
   /// Returns true if this type is void.
   #[inline(always)]
-  pub fn is_void(&self) -> bool 
+  pub fn is_void(&self) -> bool
   {
     let kind = unsafe { core::LLVMGetTypeKind(self.into()) };
     kind as c_uint == LLVMTypeKind::LLVMVoidTypeKind as c_uint
   }
-  
+
   /// Returns true if this type is a pointer.
   #[inline(always)]
-  pub fn is_pointer(&self) -> bool 
+  pub fn is_pointer(&self) -> bool
   {
     let kind = unsafe { core::LLVMGetTypeKind(self.into()) };
     kind as c_uint == LLVMTypeKind::LLVMPointerTypeKind as c_uint
   }
-  
+
   /// Returns true if this type is an integer.
   #[inline(always)]
-  pub fn is_integer(&self) -> bool 
+  pub fn is_integer(&self) -> bool
   {
     let kind = unsafe { core::LLVMGetTypeKind(self.into()) };
     kind as c_uint == LLVMTypeKind::LLVMIntegerTypeKind as c_uint
   }
-  
+
   /// Returns true if this type is any floating-point number.
   #[inline(always)]
-  pub fn is_float(&self) -> bool 
+  pub fn is_float(&self) -> bool
   {
     let kind = unsafe { core::LLVMGetTypeKind(self.into()) } as c_uint;
     kind == LLVMTypeKind::LLVMHalfTypeKind as c_uint ||
@@ -86,7 +86,7 @@ impl_display!(FunctionTy, LLVMPrintTypeToString);
 impl_has_context!(FunctionTy, LLVMGetTypeContext);
 
 impl FunctionTy {
-  
+
   /// Returns the number of parameters this signature takes.
   pub fn num_params(&self) -> usize {
     unsafe { core::LLVMCountParamTypes(self.0) as usize }
@@ -97,11 +97,11 @@ impl FunctionTy {
   	unsafe {
     	let count = core::LLVMCountParamTypes(self.0);
       let mut types: Vec<LLVMTypeRef> = (0..count).map(|_| mem::uninitialized()).collect();
-      core::LLVMGetParamTypes(self.0, types.as_mut_ptr() as *mut LLVMTypeRef);      
+      core::LLVMGetParamTypes(self.0, types.as_mut_ptr() as *mut LLVMTypeRef);
       types.into_iter().map(|t| Ty(t)).collect::<Vec<Ty>>()
     }
   }
-  
+
   /// Returns the type that this function returns.
   pub fn ret_type(&self) -> Ty {
     Ty(unsafe { core::LLVMGetReturnType(self.0)})
@@ -114,12 +114,12 @@ pub trait LLVMTy {
 
 macro_rules! impl_llvm_ty (
   ($ty:ty, $func:expr) => (
-    impl LLVMTy for $ty {  
-      fn llvm_ty(ctx: LLVMContextRef) -> Ty 
+    impl LLVMTy for $ty {
+      fn llvm_ty(ctx: LLVMContextRef) -> Ty
       {
         Ty(unsafe{$func(ctx)})
       }
-    }   
+    }
   );
 );
 
@@ -151,10 +151,10 @@ impl LLVMTy for isize {
 #[cfg(test)]
 mod tests {
 	use super::*;
-  use super::super::*;    
-	
+  use super::super::*;
+
 	#[test]
-	pub fn test_types() 
+	pub fn test_types()
 	{
 		let jit = JitCompiler::new("test1").ok().unwrap();
     let ctx = jit.context();
@@ -164,19 +164,19 @@ mod tests {
 		assert_eq!("i64",    format!("{}", i64::llvm_ty(ctx)));
 		assert_eq!("float",  format!("{}", f32::llvm_ty(ctx)));
 		assert_eq!("double", format!("{}", f64::llvm_ty(ctx)));
-		
+
 		//assert_eq!("[10 x double]",  format!("{}", Type::array_ty(&Type::f64_ty(&ctx), 10)));
-	}  
-  
+	}
+
   #[test]
   fn test_function_ty() {
     let jit = JitCompiler::new("test2").ok().unwrap();
-    let ctx = jit.context();    
-    let prototype = 
+    let ctx = jit.context();
+    let prototype =
       jit.create_func_ty(&f64::llvm_ty(ctx), &[&i8::llvm_ty(ctx), &i16::llvm_ty(ctx)]);
-    
+
     assert_eq!(prototype.ret_type(), f64::llvm_ty(ctx));
-    
+
     assert_eq!(prototype.num_params(), 2);
     assert_eq!(prototype.params().len(), 2);
     assert_eq!(prototype.params().get(0).unwrap(), &i8::llvm_ty(ctx));

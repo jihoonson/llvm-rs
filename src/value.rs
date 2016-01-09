@@ -18,7 +18,7 @@ use util::HasContext;
 
 /// Comparative operations on values.
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum Predicate 
+pub enum Predicate
 {
   Eq,
   NotEq,
@@ -34,33 +34,33 @@ pub enum Predicate
 pub trait ValueRef: LLVMRef<LLVMValueRef> {
   /// Returns the name of this value, or `None` if it lacks a name
   #[inline]
-  fn name<'a>(&self) -> Option<&'a str> 
+  fn name<'a>(&self) -> Option<&'a str>
   {
     unsafe {
       let c_name = core::LLVMGetValueName(self.as_ref());
       ::util::chars::to_nullable_str(c_name)
     }
   }
-  
+
   /// Sets the name of this value
   #[inline]
-  fn set_name(&self, name: &str) 
+  fn set_name(&self, name: &str)
   {
     let c_name = ::util::chars::from_str(name);
     unsafe {
       core::LLVMSetValueName(self.as_ref(), c_name);
     }
   }
-  
+
   /// Returns the type of this value
   #[inline]
-  fn ty(&self) -> Ty 
+  fn ty(&self) -> Ty
   {
     Ty(unsafe { core::LLVMTypeOf(self.as_ref())})
   }
-  
+
   #[inline]
-  fn dump(&self) 
+  fn dump(&self)
   {
   	unsafe { core::LLVMDumpValue(self.as_ref()); }
   }
@@ -73,41 +73,41 @@ impl_display!(Value, LLVMPrintValueToString);
 impl ValueRef for Value {}
 
 impl Value {
-  
+
   /// Create a new constant struct from the values given.
-  pub fn new_struct(ctx: LLVMContextRef, 
-  	                vals: &[&Value], 
-                    packed: bool) -> Value 
-  {                      
+  pub fn new_struct(ctx: LLVMContextRef,
+  	                vals: &[&Value],
+                    packed: bool) -> Value
+  {
     let ref_array = to_llvmref_array!(vals, LLVMValueRef);
-    
+
     Value(
-      unsafe { 
-    	  core::LLVMConstStructInContext(ctx, 
-    	                                 ref_array.as_ptr() as *mut LLVMValueRef, 
-    		                               vals.len() as c_uint, 
+      unsafe {
+    	  core::LLVMConstStructInContext(ctx,
+    	                                 ref_array.as_ptr() as *mut LLVMValueRef,
+    		                               vals.len() as c_uint,
        	                               packed as c_int)
       }
     )
   }
-  
+
   /// Create a new constant vector from the values given.
-  pub fn new_vector<'a>(vals: &[&'a Value]) -> Value 
+  pub fn new_vector<'a>(vals: &[&'a Value]) -> Value
   {
     let ref_array = to_llvmref_array!(vals, LLVMValueRef);
-    
+
     Value(
-      unsafe { 
-    	  core::LLVMConstVector(ref_array.as_ptr() as *mut LLVMValueRef, 
+      unsafe {
+    	  core::LLVMConstVector(ref_array.as_ptr() as *mut LLVMValueRef,
     	                        vals.len() as c_uint)
       }
     )
   }
-  
+
   /// Create a new constant C string from the text given.
-  pub fn new_string<'a>(ctx: LLVMContextRef, 
-  	                    text: &str, 
-  	                    rust_style: bool) -> Value 
+  pub fn new_string<'a>(ctx: LLVMContextRef,
+  	                    text: &str,
+  	                    rust_style: bool) -> Value
   {
     Value(
       unsafe {
@@ -117,7 +117,7 @@ impl Value {
       }
     )
   }
-  
+
   /// Create a new constant undefined value of the given type.
   pub fn new_undef<'a>(ty: &'a Ty) -> Value
   {
@@ -132,19 +132,19 @@ pub trait ToValue {
 
 
 macro_rules! int_to_value (
-  ($ty:ty) => (    
+  ($ty:ty) => (
     impl ToValue for $ty {
-      fn to_value(&self, ctx: LLVMContextRef) -> Value 
+      fn to_value(&self, ctx: LLVMContextRef) -> Value
       {
         Value(unsafe { core::LLVMConstInt(Self::llvm_ty(ctx).as_ptr(), *self as c_ulonglong, 0) })
-      }    
+      }
     }
   );
 );
 
 
 int_to_value!{i8}
-int_to_value!{u8}  
+int_to_value!{u8}
 int_to_value!{i16}
 int_to_value!{u16}
 int_to_value!{i32}
@@ -175,16 +175,16 @@ impl_from_into!(GlobalValue, Value);
 impl_display!(GlobalValue, LLVMPrintValueToString);
 impl ValueRef for GlobalValue {}
 
-impl GlobalValue 
+impl GlobalValue
 {
 	/// Sets the initial value for this global.
-	pub fn set_initializer(&self, value: &Value) 
+	pub fn set_initializer(&self, value: &Value)
 	{
 	  unsafe { core::LLVMSetInitializer(self.0, value.0) }
 	}
-	
+
 	/// Gets the initial value for this global.
-	pub fn get_initializer(&self) -> Value 
+	pub fn get_initializer(&self) -> Value
 	{
 	  Value(unsafe { core::LLVMGetInitializer(self.0) })
 	}
@@ -196,16 +196,16 @@ impl_from_ref!(LLVMValueRef, Arg);
 impl_from_into!(Arg, Value);
 impl_display!(Arg, LLVMPrintValueToString);
 
-impl Arg 
+impl Arg
 {
   /// Add the attribute given to this argument.
-  pub fn add_attribute(&self, attr: Attribute) 
+  pub fn add_attribute(&self, attr: Attribute)
   {
     unsafe { core::LLVMAddAttribute(self.0, attr.into()) }
   }
-  
+
   /// Add all the attributes given to this argument.
-  pub fn add_attributes(&self, attrs: &[Attribute]) 
+  pub fn add_attributes(&self, attrs: &[Attribute])
   {
     let mut sum = LLVMAttribute::empty();
     for attr in attrs {
@@ -214,18 +214,18 @@ impl Arg
     }
     unsafe { core::LLVMAddAttribute(self.into(), sum.into()) }
   }
-  
+
   /// Returns true if this argument has the attribute given.
-  pub fn has_attribute(&self, attr: Attribute) -> bool 
+  pub fn has_attribute(&self, attr: Attribute) -> bool
   {
     unsafe {
       let other = core::LLVMGetAttribute(self.into());
       other.contains(attr.into())
     }
   }
-  
+
   /// Returns true if this argument has all the attributes given.
-  pub fn has_attributes(&self, attrs: &[Attribute]) -> bool 
+  pub fn has_attributes(&self, attrs: &[Attribute]) -> bool
   {
     unsafe {
       let other = core::LLVMGetAttribute(self.into());
@@ -237,11 +237,11 @@ impl Arg
       return true;
     }
   }
-  
+
   /// Remove an attribute from this argument.
-  pub fn remove_attribute(&self, attr: Attribute) 
+  pub fn remove_attribute(&self, attr: Attribute)
   {
-    unsafe { 
+    unsafe {
     	core::LLVMRemoveAttribute(self.into(), attr.into())
     }
   }
@@ -254,9 +254,9 @@ impl_from_into!(Function, Value);
 impl_display!(Function, LLVMPrintValueToString);
 impl ValueRef for Function {}
 
-impl HasContext for Function 
+impl HasContext for Function
 {
-  fn context(&self) -> LLVMContextRef 
+  fn context(&self) -> LLVMContextRef
   {
     self.ty().context()
   }
@@ -264,16 +264,16 @@ impl HasContext for Function
 
 impl Function {
   /// Add a basic block with the name given to the function and return it.
-  pub fn append<'a>(&'a self, name: &str) -> BasicBlock 
+  pub fn append<'a>(&'a self, name: &str) -> BasicBlock
   {
     let c_name = ::util::chars::from_str(name);
     BasicBlock(unsafe {
       core::LLVMAppendBasicBlockInContext(self.context(), self.0, c_name)
     })
   }
-  
+
   /// Returns the entry block of this function or `None` if there is none.
-  pub fn get_entry(&self) -> Option<BasicBlock> 
+  pub fn get_entry(&self) -> Option<BasicBlock>
   {
     Some(
       BasicBlock(
@@ -281,13 +281,13 @@ impl Function {
       )
     )
   }
-  
+
   /// Returns the type of this value
-  pub fn signature(&self) -> FunctionTy 
+  pub fn signature(&self) -> FunctionTy
   {
     FunctionTy(unsafe { core::LLVMTypeOf(self.0)})
   }
-  
+
   /// Returns the number of function parameters
   pub fn args_count(&self) -> usize
   {
@@ -295,7 +295,7 @@ impl Function {
       core::LLVMCountParams(self.into()) as usize
     }
   }
-  
+
   pub fn arg(&self, index: usize) -> Arg
   {
     unsafe {
@@ -306,86 +306,86 @@ impl Function {
       }
     }
   }
-  
+
   /// Add the attribute given to this function.
-  pub fn add_attribute(&self, attr: Attribute) 
+  pub fn add_attribute(&self, attr: Attribute)
   {
     unsafe { core::LLVMAddFunctionAttr(self.into(), attr.into()) }
   }
-  
+
   /// Add all the attributes given to this function.
-  pub fn add_attributes(&self, attrs: &[Attribute]) 
+  pub fn add_attributes(&self, attrs: &[Attribute])
   {
     let mut sum = LLVMAttribute::empty();
-    
+
     for attr in attrs {
         let attr:LLVMAttribute = (*attr).into();
         sum = sum | attr;
     }
-    
+
     unsafe { core::LLVMAddFunctionAttr(self.into(), sum.into()) }
   }
-  
+
   /// Returns true if the attribute given is set in this function.
-  pub fn has_attribute(&self, attr: Attribute) -> bool 
+  pub fn has_attribute(&self, attr: Attribute) -> bool
   {
     unsafe {
       let other = core::LLVMGetFunctionAttr(self.into());
       other.contains(attr.into())
     }
   }
-  
+
   /// Returns true if all the attributes given is set in this function.
-  pub fn has_attributes(&self, attrs: &[Attribute]) -> bool 
+  pub fn has_attributes(&self, attrs: &[Attribute]) -> bool
   {
     unsafe {
       let other = core::LLVMGetFunctionAttr(self.into());
-      
+
       for &attr in attrs {
         if !other.contains(attr.into()) {
           return false;
         }
       }
-      
+
       return true;
     }
   }
-  
+
   /// Remove the attribute given from this function.
-  pub fn remove_attribute(&self, attr: Attribute) 
+  pub fn remove_attribute(&self, attr: Attribute)
   {
     unsafe { core::LLVMRemoveFunctionAttr(self.into(), attr.into()) }
   }
-  
+
   pub fn verify(&self) -> Result<(), String>
   {
-    unsafe {      
+    unsafe {
       let action = analysis::LLVMVerifierFailureAction::LLVMReturnStatusAction;
       let ret = analysis::LLVMVerifyFunction(self.0, action);
-      
+
       llvm_ret!(ret, "function is not valid")
     }
   }
 }
 
-impl IntoIterator for Function 
+impl IntoIterator for Function
 {
   type Item = Arg;
   type IntoIter = ValueIter<Arg>;
-  
+
   /// Iterate through the functions in the module
-  fn into_iter(self) -> ValueIter<Arg> 
-  {    
+  fn into_iter(self) -> ValueIter<Arg>
+  {
  		ValueIter::new(
  			unsafe { core::LLVMGetFirstParam(self.into()) },
- 			core::LLVMGetNextParam)  	
+ 			core::LLVMGetNextParam)
   }
 }
 
 /// A way of indicating to LLVM how you want arguments / functions to be handled.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 #[repr(C)]
-pub enum Attribute 
+pub enum Attribute
 {
   /// Zero-extended before or after call.
   ZExt =              0b1,
@@ -441,17 +441,17 @@ pub enum Attribute
   NonLazyBind =       0b10000000000000000000000000000000
 }
 
-impl From<LLVMAttribute> for Attribute 
+impl From<LLVMAttribute> for Attribute
 {
-  fn from(attr: LLVMAttribute) -> Attribute 
+  fn from(attr: LLVMAttribute) -> Attribute
   {
     unsafe { mem::transmute(attr) }
   }
 }
 
-impl From<Attribute> for LLVMAttribute 
+impl From<Attribute> for LLVMAttribute
 {
-  fn from(attr: Attribute) -> LLVMAttribute 
+  fn from(attr: Attribute) -> LLVMAttribute
   {
     unsafe { mem::transmute(attr) }
   }
@@ -472,17 +472,17 @@ impl PhiNode {
     let mut blocks = vec![block.0];
     unsafe { core::LLVMAddIncoming(self.0, values.as_mut_ptr(), blocks.as_mut_ptr(), 1) }
   }
-  
+
   /// Counts the number of incoming values attached to this PHI node.
   pub fn count_incoming(&self) -> u32 {
     unsafe { core::LLVMCountIncoming(self.0) }
   }
-  
+
   /// Gets an incoming value from this PHI node from a specific index.
   pub fn get_incoming_value(&self, index: u32) -> Value {
     Value(unsafe { core::LLVMGetIncomingValue(self.0, index) })
   }
-  
+
   /// Gets an incoming basic block from this PHI node from a specific index.
   pub fn get_incoming_block(&self, index: u32) -> BasicBlock {
     BasicBlock(unsafe { core::LLVMGetIncomingBlock(self.0, index)})
@@ -491,7 +491,7 @@ impl PhiNode {
 
 /// Value Iterator implementation.
 ///
-/// T can be all descendent types of LLVMValueRef.  
+/// T can be all descendent types of LLVMValueRef.
 #[derive(Copy, Clone)]
 pub struct ValueIter<T: From<LLVMValueRef>> {
   cur    : LLVMValueRef,
@@ -501,7 +501,7 @@ pub struct ValueIter<T: From<LLVMValueRef>> {
 
 impl<T: From<LLVMValueRef>> ValueIter<T>
 {
-  pub fn new(cur: LLVMValueRef, 
+  pub fn new(cur: LLVMValueRef,
              step: unsafe extern "C" fn(LLVMValueRef) -> LLVMValueRef) -> Self
 	{
     ValueIter {
@@ -512,14 +512,14 @@ impl<T: From<LLVMValueRef>> ValueIter<T>
   }
 }
 
-impl<T: From<LLVMValueRef>> Iterator for ValueIter<T> 
+impl<T: From<LLVMValueRef>> Iterator for ValueIter<T>
 {
   type Item = T;
 
-  fn next(&mut self) -> Option<T> 
+  fn next(&mut self) -> Option<T>
   {
     let old: LLVMValueRef = self.cur;
-    
+
     if !old.is_null() {
       self.cur = unsafe { (self.step)(old) };
       Some(old.into())
@@ -533,16 +533,16 @@ impl<T: From<LLVMValueRef>> Iterator for ValueIter<T>
 mod tests {
 	use super::*;
   use super::super::*;
-  
+
   use llvm_sys::prelude::LLVMValueRef;
-  
+
 	#[test]
-	pub fn test_values() 
+	pub fn test_values()
 	{
     let jit = JitCompiler::new("test").ok().unwrap();
-    
+
     assert_eq!( "i8 1", format!("{}", 1i8.to_value(jit.context())));
-    assert_eq!( "i8 1", format!("{}", 1u8.to_value(jit.context())));    
+    assert_eq!( "i8 1", format!("{}", 1u8.to_value(jit.context())));
     assert_eq!("i16 1", format!("{}", 1i16.to_value(jit.context())));
     assert_eq!("i16 1", format!("{}", 1u16.to_value(jit.context())));
     assert_eq!("i32 1", format!("{}", 1i32.to_value(jit.context())));
@@ -551,24 +551,24 @@ mod tests {
     assert_eq!("i64 1", format!("{}", 1u64.to_value(jit.context())));
     assert_eq!("i64 1", format!("{}", 1isize.to_value(jit.context())));
     assert_eq!("i64 1", format!("{}", 1usize.to_value(jit.context())));
-    
+
     assert_eq!("float 1.000000e+00", format!("{}", 1f32.to_value(jit.context())));
     assert_eq!("double 1.000000e+00", format!("{}", 1f64.to_value(jit.context())));
 	}
-  
+
   #[test]
   pub fn test_into() {
     let jit = JitCompiler::new("test").ok().unwrap();
-        
-    let v1 = 1i8.to_value(jit.context());    
+
+    let v1 = 1i8.to_value(jit.context());
     let ref_v1 = &v1;
-    
+
     let raw_ref1: LLVMValueRef = v1.into();
-    let raw_ref2: LLVMValueRef = ref_v1.into();    
-    
+    let raw_ref2: LLVMValueRef = ref_v1.into();
+
     assert_eq!(v1.as_ref(), raw_ref1);
     assert_eq!(v1.as_ref(), raw_ref2);
-    assert_eq!(raw_ref1, raw_ref2);    
+    assert_eq!(raw_ref1, raw_ref2);
   }
 }
 

@@ -12,7 +12,7 @@ macro_rules! llvm_ret(
     } else {
       Err($err_msg.to_string())
     }
-  );  
+  );
 );
 
 macro_rules! expect_noerr(
@@ -20,30 +20,30 @@ macro_rules! expect_noerr(
     if $ret == 1 {
       return Err($message.to_string());
     }
-  );  
+  );
 );
 
 macro_rules! impl_from_ref(
-  ($llvm_ref:ty, $wrapper:ident) => (    
+  ($llvm_ref:ty, $wrapper:ident) => (
     impl LLVMRef<$llvm_ref> for $wrapper {
       #[inline]
       fn as_ref(&self) -> $llvm_ref { self.0 }
     }
-    
+
     impl From<$llvm_ref> for $wrapper {
       #[inline]
       fn from(r: $llvm_ref) -> Self {
         $wrapper(r)
       }
     }
-    
+
     impl From<$wrapper> for $llvm_ref {
       #[inline]
       fn from(w: $wrapper) -> Self {
         w.0
       }
     }
-    
+
     impl<'a> From<&'a $wrapper> for $llvm_ref {
       #[inline]
       fn from(w: &'a $wrapper) -> $llvm_ref {
@@ -61,7 +61,7 @@ macro_rules! impl_from_into(
         $to(t.0)
       }
     }
-    
+
     impl<'a> From<&'a $from> for $to {
       #[inline]
       fn from(t: &'a $from) -> Self {
@@ -89,7 +89,7 @@ macro_rules! impl_dispose (
           $func(self.0);
         }
       }
-    }    
+    }
   );
 );
 
@@ -103,7 +103,7 @@ macro_rules! impl_display(
         })
 		  }
     }
-  	
+
   	impl fmt::Display for $ty {
     	fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
 				fmt.write_str(unsafe {
@@ -120,4 +120,3 @@ macro_rules! to_llvmref_array(
     $e.iter().map(|x| x.as_ref()).collect::<Vec<$t>>()
   );
 );
-  
