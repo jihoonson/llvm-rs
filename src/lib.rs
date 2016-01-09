@@ -377,7 +377,7 @@ impl JitCompiler {
   }
 
   /// Maps a global to a specific memory location.
-  pub unsafe fn add_global_mapping<T>(&self, global: &Value, addr: *const T)
+  pub unsafe fn add_global_mapping<T, V: LLVMRef<LLVMValueRef>>(&self, global: &V, addr: *const T)
   {
     LLVMAddGlobalMapping(self.ee, global.as_ref(), mem::transmute(addr));
   }
@@ -397,6 +397,21 @@ impl JitCompiler {
       let ty = core::LLVMGetNamedFunction(self.module, c_name);
       ::util::ret_nullable_ptr(ty)
     }
+  }
+
+  /// Returns the function after creating prototype and initialize the entry block
+  pub fn create_func_prototype(&self, name: &str, ret_ty: &Ty, param_tys: &[&Ty],
+      builder: Option<&Builder>) -> Function
+  {
+    let func_ty = self.create_func_ty(ret_ty, param_tys);
+    let func = self.add_func(name, &func_ty);
+
+    if let Some(b) = builder {
+      let entry = func.append("entry");
+      b.position_at_end(&entry)
+    }
+
+    func
   }
 
   /// Returns a pointer to the machine code for the raw function poionter.
@@ -440,9 +455,7 @@ mod tests {
     let jit = JitCompiler::new("test_jit").ok().unwrap();
     let ctx = jit.context();
 
-    let func_ty = jit.create_func_ty(&u64::llvm_ty(ctx), &[&u64::llvm_ty(ctx)]);
-    let func = jit.add_func("test", &func_ty);
-
+    let func = jit.create_func_prototype("test", &u64::llvm_ty(ctx), &[&u64::llvm_ty(ctx)], None);
     let fn_ptr: *const c_void = unsafe { ::std::mem::transmute(test_extern_fn) };
     unsafe { jit.add_global_mapping(&func, fn_ptr) };
 
