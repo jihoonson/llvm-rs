@@ -5,6 +5,7 @@ use std::mem;
 use llvm_sys::{core, LLVMIntPredicate, LLVMRealPredicate};
 use llvm_sys::prelude::{
   LLVMBuilderRef,
+  LLVMContextRef,
   LLVMValueRef
 };
 use libc::{c_char, c_uint};
@@ -58,6 +59,11 @@ macro_rules! bin_instr (
 );
 
 impl Builder {
+
+  pub fn new(ctx: LLVMContextRef) -> Builder
+  {
+    Builder(unsafe { core::LLVMCreateBuilderInContext(ctx) })
+  }
 
   pub fn get_insert_block(&self) -> BasicBlock
   {

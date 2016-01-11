@@ -268,7 +268,7 @@ impl JitCompiler {
 
   pub fn new_builder(&self) -> Builder
   {
-    Builder(unsafe { core::LLVMCreateBuilderInContext(self.ctx) })
+    Builder::new(self.ctx)
   }
 
   /// Returns the type with the name given, or `None`` if no type with that name exists.
