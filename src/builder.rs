@@ -2,7 +2,7 @@
 
 use std::mem;
 
-use llvm_sys::{core, LLVMIntPredicate, LLVMRealPredicate};
+use llvm_sys::{core, LLVMIntPredicate, LLVMOpcode, LLVMRealPredicate};
 use llvm_sys::prelude::{
   LLVMBuilderRef,
   LLVMContextRef,
@@ -16,6 +16,71 @@ use block::BasicBlock;
 use value::{Function, Value, ValueRef, Predicate, PhiNode};
 
 static NULL_NAME:[c_char; 1] = [0];
+
+/// See http://llvm.org/docs/LangRef.html#conversion-operations
+pub enum CastOps
+{
+  /// The ‘trunc‘ instruction takes a value to trunc, and a type to trunc it to.
+  /// Both types must be of integer types, or vectors of the same number of
+  /// integers. The bit size of the value must be larger than the bit size of
+  /// the destination type, ty2. Equal sized types are not allowed.
+  Trunc,
+  /// The ‘zext‘ instruction takes a value to cast, and a type to cast it to.
+  /// Both types must be of integer types, or vectors of the same number of
+  /// integers. The bit size of the value must be smaller than the bit size
+  /// of the destination type, ty2.
+  ZExt,
+  /// The ‘sext‘ instruction takes a value to cast, and a type to cast it to.
+  /// Both types must be of integer types, or vectors of the same number of
+  /// integers. The bit size of the value must be smaller than the bit size
+  /// of the destination type, ty2.
+  SExt,
+  /// The ‘fptrunc‘ instruction takes a floating point value to cast and
+  /// a floating point type to cast it to. The size of value must be larger
+  /// than the size of ty2. This implies that fptrunc cannot be used to make
+  /// a no-op cast.
+  FPTrunc,
+  /// The ‘fpext‘ instruction extends the value from a smaller floating point
+  /// type to a larger floating point type. The fpext cannot be used to make
+  /// a no-op cast because it always changes bits. Use bitcast to make a no-op
+  /// cast for a floating point cast.
+  FPExt,
+  /// The ‘uitofp‘ instruction takes a value to cast, which must be a scalar
+  /// or vector integer value, and a type to cast it to ty2, which must be
+  /// an floating point type. If ty is a vector integer type, ty2 must be
+  /// a vector floating point type with the same number of elements as ty.
+  UIToFP,
+  /// The ‘sitofp‘ instruction takes a value to cast, which must be a scalar
+  /// or vector integer value, and a type to cast it to ty2, which must be
+  /// an floating point type. If ty is a vector integer type, ty2 must be
+  /// a vector floating point type with the same number of elements as ty.
+  SIToFP,
+  /// The ‘fptoui‘ instruction takes a value to cast, which must be a scalar
+  /// or vector floating point value, and a type to cast it to ty2, which
+  /// must be an integer type. If ty is a vector floating point type, ty2
+  /// must be a vector integer type with the same number of elements as ty.
+  FPToUI,
+  /// The ‘fptosi‘ instruction takes a value to cast, which must be a scalar
+  /// or vector floating point value, and a type to cast it to ty2, which must
+  /// be an integer type. If ty is a vector floating point type, ty2 must be a
+  /// vector integer type with the same number of elements as ty.
+  FPToSI,
+  /// The ‘ptrtoint‘ instruction takes a value to cast, which must be a value
+  /// of type pointer or a vector of pointers, and a type to cast it to ty2,
+  /// which must be an integer or a vector of integers type.
+  PtrToInt,
+  /// The ‘inttoptr‘ instruction takes an integer value to cast, and a type
+  /// to cast it to, which must be a pointer type.
+  IntToPtr,
+  /// The ‘bitcast‘ instruction takes a value to cast, which must be a
+  /// non-aggregate first class value, and a type to cast it to, which must
+  /// also be a non-aggregate first class type. The bit sizes of value and
+  /// the destination type, ty2, must be identical. If the source type is a
+  /// pointer, the destination type must also be a pointer of the same size.
+  /// This instruction supports bitwise conversion of vectors to integers and
+  /// to vectors of other types (as long as they have the same size).
+  BitCast
+}
 
 pub struct Builder(pub LLVMBuilderRef);
 impl_dispose!(Builder, core::LLVMDisposeBuilder);
@@ -213,11 +278,37 @@ impl Builder {
   pub fn create_select(&self, cond: &Value, true_val: &Value, false_val: &Value) -> Value
   {
     Value(unsafe {
-    	core::LLVMBuildSelect(self.0,
-    		                    cond.0,
-    		                    true_val.0,
-    		                    false_val.0,
-    		                    NULL_NAME.as_ptr()) })
+    	core::LLVMBuildSelect(
+        self.0,
+    		cond.0,
+    		true_val.0,
+    		false_val.0,
+    		NULL_NAME.as_ptr()) })
+  }
+
+  pub fn create_cast(&self, ops: CastOps, value: &Value, dest_ty: &Ty) -> Value
+  {
+    let llvm_ops = match ops {
+      CastOps::Trunc    => LLVMOpcode::LLVMTrunc,
+      CastOps::ZExt     => LLVMOpcode::LLVMZExt,
+      CastOps::SExt     => LLVMOpcode::LLVMSExt,
+      CastOps::FPTrunc  => LLVMOpcode::LLVMFPTrunc,
+      CastOps::FPExt    => LLVMOpcode::LLVMFPExt,
+      CastOps::UIToFP   => LLVMOpcode::LLVMUIToFP,
+      CastOps::SIToFP   => LLVMOpcode::LLVMSIToFP,
+      CastOps::FPToUI   => LLVMOpcode::LLVMFPToUI,
+      CastOps::FPToSI   => LLVMOpcode::LLVMFPToUI,
+      CastOps::PtrToInt => LLVMOpcode::LLVMPtrToInt,
+      CastOps::IntToPtr => LLVMOpcode::LLVMIntToPtr,
+      CastOps::BitCast  => LLVMOpcode::LLVMBitCast
+    };
+
+    Value(unsafe { core::LLVMBuildCast(
+      self.0,
+      llvm_ops,
+      value.0,
+      dest_ty.0,
+      NULL_NAME.as_ptr())})
   }
 
   /// Build an instruction that casts a value into a certain type.
@@ -380,7 +471,7 @@ mod tests {
 
     builder.position_at_end(&entry);
     let local = builder.create_alloca(&u64::llvm_ty(ctx));
-    let cond = builder.create_cmp(&value.into(), &5u64.to_value(ctx), Predicate::Lth);
+    let cond = builder.create_cmp(&value.into(), &5u64.to_value(ctx), Predicate::Lt);
     builder.create_cond_br(&cond, &then_bb, &else_bb);
 
     builder.position_at_end(&then_bb);
