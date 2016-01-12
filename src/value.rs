@@ -21,11 +21,11 @@ use util::HasContext;
 pub enum Predicate
 {
   Eq,
-  NotEq,
-  Gth,
-  Geq,
-  Lth,
-  Leq
+  Ne,
+  Lt,
+  Le,
+  Gt,
+  Ge
 }
 
 /// Common functions for LLVMValueRef

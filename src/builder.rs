@@ -288,16 +288,16 @@ impl Builder {
 
     if lhs_ty.is_integer() {
 	    let p = match (pred, signed) {
-	    	(Predicate::Eq,    _)   => LLVMIntPredicate::LLVMIntEQ,
-	    	(Predicate::NotEq, _)   => LLVMIntPredicate::LLVMIntNE,
-	    	(Predicate::Lth, true)  => LLVMIntPredicate::LLVMIntSLT,
-	    	(Predicate::Lth, false) => LLVMIntPredicate::LLVMIntULT,
-	    	(Predicate::Leq, true)  => LLVMIntPredicate::LLVMIntSLE,
-	    	(Predicate::Leq, false) => LLVMIntPredicate::LLVMIntULE,
-	    	(Predicate::Gth, true)  => LLVMIntPredicate::LLVMIntSGT,
-	    	(Predicate::Gth, false) => LLVMIntPredicate::LLVMIntUGT,
-	    	(Predicate::Geq, true)  => LLVMIntPredicate::LLVMIntSGE,
-	    	(Predicate::Geq, false) => LLVMIntPredicate::LLVMIntUGE,
+	    	(Predicate::Eq,    _)  => LLVMIntPredicate::LLVMIntEQ,
+	    	(Predicate::Ne, _)     => LLVMIntPredicate::LLVMIntNE,
+	    	(Predicate::Lt, true)  => LLVMIntPredicate::LLVMIntSLT,
+	    	(Predicate::Lt, false) => LLVMIntPredicate::LLVMIntULT,
+	    	(Predicate::Le, true)  => LLVMIntPredicate::LLVMIntSLE,
+	    	(Predicate::Le, false) => LLVMIntPredicate::LLVMIntULE,
+	    	(Predicate::Gt, true)  => LLVMIntPredicate::LLVMIntSGT,
+	    	(Predicate::Gt, false) => LLVMIntPredicate::LLVMIntUGT,
+	    	(Predicate::Ge, true)  => LLVMIntPredicate::LLVMIntSGE,
+	    	(Predicate::Ge, false) => LLVMIntPredicate::LLVMIntUGE,
 	    };
 
 	    Value(unsafe {
@@ -309,12 +309,12 @@ impl Builder {
 
     } else if lhs_ty.is_float() {
     	let p = match pred {
-        Predicate::Eq    => LLVMRealPredicate::LLVMRealOEQ,
-        Predicate::NotEq => LLVMRealPredicate::LLVMRealONE,
-        Predicate::Gth   => LLVMRealPredicate::LLVMRealOGT,
-        Predicate::Geq   => LLVMRealPredicate::LLVMRealOGE,
-        Predicate::Lth   => LLVMRealPredicate::LLVMRealOLT,
-        Predicate::Leq   => LLVMRealPredicate::LLVMRealOLE
+        Predicate::Eq => LLVMRealPredicate::LLVMRealOEQ,
+        Predicate::Ne => LLVMRealPredicate::LLVMRealONE,
+        Predicate::Gt => LLVMRealPredicate::LLVMRealOGT,
+        Predicate::Ge => LLVMRealPredicate::LLVMRealOGE,
+        Predicate::Lt => LLVMRealPredicate::LLVMRealOLT,
+        Predicate::Le => LLVMRealPredicate::LLVMRealOLE
       };
 
    	  Value(unsafe {
