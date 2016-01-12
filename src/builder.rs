@@ -18,7 +18,7 @@ use value::{Function, Value, ValueRef, Predicate, PhiNode};
 static NULL_NAME:[c_char; 1] = [0];
 
 /// See http://llvm.org/docs/LangRef.html#conversion-operations
-pub enum CastOps
+pub enum CastOp
 {
   /// The ‘trunc‘ instruction takes a value to trunc, and a type to trunc it to.
   /// Both types must be of integer types, or vectors of the same number of
@@ -286,21 +286,21 @@ impl Builder {
     		NULL_NAME.as_ptr()) })
   }
 
-  pub fn create_cast(&self, op: CastOps, value: &Value, dest_ty: &Ty) -> Value
+  pub fn create_cast(&self, op: CastOp, value: &Value, dest_ty: &Ty) -> Value
   {
     let llvm_op = match op {
-      CastOps::Trunc    => LLVMOpcode::LLVMTrunc,
-      CastOps::ZExt     => LLVMOpcode::LLVMZExt,
-      CastOps::SExt     => LLVMOpcode::LLVMSExt,
-      CastOps::FPTrunc  => LLVMOpcode::LLVMFPTrunc,
-      CastOps::FPExt    => LLVMOpcode::LLVMFPExt,
-      CastOps::UIToFP   => LLVMOpcode::LLVMUIToFP,
-      CastOps::SIToFP   => LLVMOpcode::LLVMSIToFP,
-      CastOps::FPToUI   => LLVMOpcode::LLVMFPToUI,
-      CastOps::FPToSI   => LLVMOpcode::LLVMFPToUI,
-      CastOps::PtrToInt => LLVMOpcode::LLVMPtrToInt,
-      CastOps::IntToPtr => LLVMOpcode::LLVMIntToPtr,
-      CastOps::BitCast  => LLVMOpcode::LLVMBitCast
+      CastOp::Trunc    => LLVMOpcode::LLVMTrunc,
+      CastOp::ZExt     => LLVMOpcode::LLVMZExt,
+      CastOp::SExt     => LLVMOpcode::LLVMSExt,
+      CastOp::FPTrunc  => LLVMOpcode::LLVMFPTrunc,
+      CastOp::FPExt    => LLVMOpcode::LLVMFPExt,
+      CastOp::UIToFP   => LLVMOpcode::LLVMUIToFP,
+      CastOp::SIToFP   => LLVMOpcode::LLVMSIToFP,
+      CastOp::FPToUI   => LLVMOpcode::LLVMFPToUI,
+      CastOp::FPToSI   => LLVMOpcode::LLVMFPToUI,
+      CastOp::PtrToInt => LLVMOpcode::LLVMPtrToInt,
+      CastOp::IntToPtr => LLVMOpcode::LLVMIntToPtr,
+      CastOp::BitCast  => LLVMOpcode::LLVMBitCast
     };
 
     Value(unsafe { core::LLVMBuildCast(
