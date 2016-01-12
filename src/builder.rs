@@ -286,9 +286,9 @@ impl Builder {
     		NULL_NAME.as_ptr()) })
   }
 
-  pub fn create_cast(&self, ops: CastOps, value: &Value, dest_ty: &Ty) -> Value
+  pub fn create_cast(&self, op: CastOps, value: &Value, dest_ty: &Ty) -> Value
   {
-    let llvm_ops = match ops {
+    let llvm_op = match op {
       CastOps::Trunc    => LLVMOpcode::LLVMTrunc,
       CastOps::ZExt     => LLVMOpcode::LLVMZExt,
       CastOps::SExt     => LLVMOpcode::LLVMSExt,
@@ -305,7 +305,7 @@ impl Builder {
 
     Value(unsafe { core::LLVMBuildCast(
       self.0,
-      llvm_ops,
+      llvm_op,
       value.0,
       dest_ty.0,
       NULL_NAME.as_ptr())})
