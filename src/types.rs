@@ -23,8 +23,12 @@ impl Ty {
   pub fn as_ptr(&self) -> LLVMTypeRef { self.0 }
 
   #[inline(always)]
-  pub fn void_ty<'a>(ctx: LLVMContextRef) -> Ty
-  {
+  pub fn pointer_ty(&self) -> Ty {
+    Ty(unsafe { core::LLVMPointerType(self.0, 0 as c_uint) })
+  }
+
+  #[inline(always)]
+  pub fn void_ty<'a>(ctx: LLVMContextRef) -> Ty {
   	Ty(unsafe { core::LLVMVoidTypeInContext(ctx) })
   }
 

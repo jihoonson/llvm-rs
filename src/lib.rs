@@ -297,9 +297,9 @@ impl JitCompiler {
 
   /// Make a new pointer with the given element type.
   #[inline(always)]
-  pub fn get_pointer_ty(&self, elem: &Ty) -> Ty
+  pub fn get_pointer_ty(&self, ty: &Ty) -> Ty
   {
-    Ty(unsafe { core::LLVMPointerType(elem.0, 0 as c_uint) })
+    Ty(unsafe { core::LLVMPointerType(ty.0, 0 as c_uint) })
   }
 
   pub fn get_void_ty(&self) -> &Ty { &self.void_ty }
