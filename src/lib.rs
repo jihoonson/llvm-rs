@@ -47,7 +47,7 @@ use libc::{c_char, c_uint};
 use buffer::MemoryBuffer;
 use builder::Builder;
 use value::{GlobalValue, Function, ToValue, Value, ValueIter, ValueRef};
-use types::{FunctionTy, Ty};
+use types::{FunctionTy, LLVMTy, Ty};
 use util::chars;
 
 pub const JIT_OPT_LVEL: usize = 2;
@@ -131,7 +131,14 @@ pub struct JitCompiler
   ee     : LLVMExecutionEngineRef,
   builder: Builder,
 
-  void_ty: Ty
+  void_ty: Ty,
+  bool_ty: Ty,
+  i8_ty  : Ty,
+  i16_ty : Ty,
+  i32_ty : Ty,
+  i64_ty : Ty,
+  f32_ty : Ty,
+  f64_ty : Ty
 }
 
 impl JitCompiler {
@@ -161,7 +168,14 @@ impl JitCompiler {
       ee     : ee,
       builder: builder,
 
-      void_ty: Ty::void_ty(ctx)
+      void_ty: Ty::void_ty(ctx),
+      bool_ty: bool::llvm_ty(ctx),
+      i8_ty  : i8::llvm_ty(ctx),
+      i16_ty : i16::llvm_ty(ctx),
+      i32_ty : i32::llvm_ty(ctx),
+      i64_ty : i64::llvm_ty(ctx),
+      f32_ty : f32::llvm_ty(ctx),
+      f64_ty : f64::llvm_ty(ctx)
     })
   }
 
@@ -288,11 +302,14 @@ impl JitCompiler {
     Ty(unsafe { core::LLVMPointerType(elem.0, 0 as c_uint) })
   }
 
-
-  pub fn get_void_ty(&self) -> &Ty
-  {
-    &self.void_ty
-  }
+  pub fn get_void_ty(&self) -> &Ty { &self.void_ty }
+  pub fn get_bool_ty(&self) -> &Ty { &self.bool_ty }
+  pub fn get_i8_ty  (&self) -> &Ty { &self.i8_ty }
+  pub fn get_i16_ty (&self) -> &Ty { &self.i16_ty }
+  pub fn get_i32_ty (&self) -> &Ty { &self.i32_ty }
+  pub fn get_i64_ty (&self) -> &Ty { &self.i64_ty }
+  pub fn get_f32_ty (&self) -> &Ty { &self.f32_ty }
+  pub fn get_f64_ty (&self) -> &Ty { &self.f64_ty }
 
   pub fn create_func_ty(&self, ret: &Ty, args: &[&Ty]) -> FunctionTy
   {

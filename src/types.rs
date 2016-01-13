@@ -123,6 +123,7 @@ macro_rules! impl_llvm_ty (
   );
 );
 
+impl_llvm_ty!(bool, core::LLVMInt8TypeInContext);
 impl_llvm_ty!(i8,  core::LLVMInt8TypeInContext);
 impl_llvm_ty!(u8,  core::LLVMInt8TypeInContext);
 impl_llvm_ty!(i16, core::LLVMInt16TypeInContext);
@@ -158,6 +159,7 @@ mod tests {
 	{
 		let jit = JitCompiler::new("test1").ok().unwrap();
     let ctx = jit.context();
+    assert_eq!("i8",     format!("{}", bool::llvm_ty(ctx)));
 		assert_eq!("i8",     format!("{}", i8::llvm_ty(ctx)));
 		assert_eq!("i16",    format!("{}", i16::llvm_ty(ctx)));
 		assert_eq!("i32",    format!("{}", i32::llvm_ty(ctx)));
