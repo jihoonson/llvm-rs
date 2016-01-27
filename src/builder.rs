@@ -197,6 +197,7 @@ impl Builder {
   /// Build an instruction that store the value `val` in the pointer `ptr`.
   pub fn create_store(&self, val: &Value, ptr: &Value) -> Value
   {
+    debug_assert!(ptr.ty().is_pointer(), "The target must be a pointer type");
     Value(unsafe { core::LLVMBuildStore(self.0, val.0, ptr.0) })
   }
 
