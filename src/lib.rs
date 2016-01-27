@@ -12,13 +12,15 @@ pub mod util;
 pub mod types;
 pub mod value;
 
+// public reimports from llvm_sys;
+pub use llvm_sys::prelude::LLVMContextRef;
+
 use std::mem;
 use std::ptr;
 
 use llvm_sys::analysis;
 use llvm_sys::core;
 use llvm_sys::prelude::{
-  LLVMContextRef,
   LLVMModuleRef,
   LLVMTypeRef,
   LLVMValueRef,
@@ -49,6 +51,7 @@ use builder::Builder;
 use value::{GlobalValue, Function, ToValue, Value, ValueIter, ValueRef};
 use types::{FunctionTy, LLVMTy, Ty};
 use util::chars;
+
 
 pub const JIT_OPT_LVEL: usize = 2;
 
@@ -137,6 +140,7 @@ pub struct JitCompiler
   i16_ty : Ty,
   i32_ty : Ty,
   i64_ty : Ty,
+  u64_ty : Ty,
   f32_ty : Ty,
   f64_ty : Ty
 }
@@ -174,6 +178,7 @@ impl JitCompiler {
       i16_ty : i16::llvm_ty(ctx),
       i32_ty : i32::llvm_ty(ctx),
       i64_ty : i64::llvm_ty(ctx),
+      u64_ty : u64::llvm_ty(ctx),
       f32_ty : f32::llvm_ty(ctx),
       f64_ty : f64::llvm_ty(ctx)
     })
@@ -302,14 +307,15 @@ impl JitCompiler {
     Ty(unsafe { core::LLVMPointerType(ty.0, 0 as c_uint) })
   }
 
-  pub fn get_void_ty(&self) -> &Ty { &self.void_ty }
-  pub fn get_bool_ty(&self) -> &Ty { &self.bool_ty }
-  pub fn get_i8_ty  (&self) -> &Ty { &self.i8_ty }
-  pub fn get_i16_ty (&self) -> &Ty { &self.i16_ty }
-  pub fn get_i32_ty (&self) -> &Ty { &self.i32_ty }
-  pub fn get_i64_ty (&self) -> &Ty { &self.i64_ty }
-  pub fn get_f32_ty (&self) -> &Ty { &self.f32_ty }
-  pub fn get_f64_ty (&self) -> &Ty { &self.f64_ty }
+  pub fn get_void_ty(&self)   -> &Ty { &self.void_ty }
+  pub fn get_bool_ty(&self)   -> &Ty { &self.bool_ty }
+  pub fn get_i8_ty  (&self)   -> &Ty { &self.i8_ty }
+  pub fn get_i16_ty (&self)   -> &Ty { &self.i16_ty }
+  pub fn get_i32_ty (&self)   -> &Ty { &self.i32_ty }
+  pub fn get_i64_ty (&self)   -> &Ty { &self.i64_ty }
+  pub fn get_u64_ty (&self)   -> &Ty { &self.u64_ty }
+  pub fn get_f32_ty (&self)   -> &Ty { &self.f32_ty }
+  pub fn get_f64_ty (&self)   -> &Ty { &self.f64_ty }
 
   pub fn create_func_ty(&self, ret: &Ty, args: &[&Ty]) -> FunctionTy
   {
