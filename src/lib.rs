@@ -71,6 +71,12 @@ pub trait LLVMRef<T> {
   fn as_ref(&self) -> T;
 }
 
+extern "C" {
+  pub fn LLVMVersionMinor() -> u32;
+}
+
+
+
 
 fn new_module(ctx: LLVMContextRef, name: &str) -> LLVMModuleRef
 {
