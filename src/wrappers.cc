@@ -50,10 +50,10 @@ extern "C" LLVMValueRef LLVMGetOrInsertGlobal(LLVMModuleRef M,
   return wrap(unwrap(M)->getOrInsertGlobal(Name, unwrap(Ty)));
 }
 
-extern "C" uint32_t LLVMVersionMinor() {
-  return LLVM_VERSION_MINOR;
-}
-
 extern "C" uint32_t LLVMVersionMajor() {
   return LLVM_VERSION_MAJOR;
+}
+
+extern "C" uint32_t LLVMVersionMinor() {
+  return LLVM_VERSION_MINOR;
 }

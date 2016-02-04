@@ -72,6 +72,7 @@ pub trait LLVMRef<T> {
 }
 
 extern "C" {
+  pub fn LLVMVersionMajor() -> u32;
   pub fn LLVMVersionMinor() -> u32;
 }
 
@@ -497,5 +498,11 @@ mod tests {
     }
 
     jit.verify().unwrap();
+  }
+
+  #[test]
+  fn test_version() {
+    assert!(unsafe { LLVMVersionMajor() } >= 3);
+    assert!(unsafe { LLVMVersionMinor() } >= 6);
   }
 }
