@@ -76,9 +76,6 @@ extern "C" {
   pub fn LLVMVersionMinor() -> u32;
 }
 
-
-
-
 fn new_module(ctx: LLVMContextRef, name: &str) -> LLVMModuleRef
 {
   let c_name = util::chars::from_str(name);
