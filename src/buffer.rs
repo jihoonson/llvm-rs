@@ -8,14 +8,12 @@ use util::chars;
 
 pub struct MemoryBuffer(LLVMMemoryBufferRef);
 
-impl MemoryBuffer
-{
+impl MemoryBuffer {
   pub fn as_ptr(&self) -> LLVMMemoryBufferRef {
     self.0
   }
 
-  pub fn from_file(path: &str) -> Result<MemoryBuffer, String>
-  {
+  pub fn from_file(path: &str) -> Result<MemoryBuffer, String> {
     let c_path = chars::from_str(path);
 
     unsafe {

@@ -3,11 +3,7 @@
 use std::mem;
 
 use llvm_sys::{core, LLVMIntPredicate, LLVMOpcode, LLVMRealPredicate};
-use llvm_sys::prelude::{
-  LLVMBuilderRef,
-  LLVMContextRef,
-  LLVMValueRef
-};
+use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef};
 use libc::{c_char, c_uint};
 
 use super::LLVMRef;
@@ -15,11 +11,10 @@ use types::Ty;
 use block::BasicBlock;
 use value::{Function, Value, ValueRef, Predicate, PhiNode};
 
-static NULL_NAME:[c_char; 1] = [0];
+static NULL_NAME: [c_char; 1] = [0];
 
 /// See http://llvm.org/docs/LangRef.html#conversion-operations
-pub enum CastOp
-{
+pub enum CastOp {
   /// The ‘trunc‘ instruction takes a value to trunc, and a type to trunc it to.
   /// Both types must be of integer types, or vectors of the same number of
   /// integers. The bit size of the value must be larger than the bit size of
@@ -79,7 +74,7 @@ pub enum CastOp
   /// pointer, the destination type must also be a pointer of the same size.
   /// This instruction supports bitwise conversion of vectors to integers and
   /// to vectors of other types (as long as they have the same size).
-  BitCast
+  BitCast,
 }
 
 pub struct Builder(pub LLVMBuilderRef);
@@ -124,52 +119,41 @@ macro_rules! bin_instr (
 );
 
 impl Builder {
-
-  pub fn new(ctx: LLVMContextRef) -> Builder
-  {
+  pub fn new(ctx: LLVMContextRef) -> Builder {
     Builder(unsafe { core::LLVMCreateBuilderInContext(ctx) })
   }
 
-  pub fn get_insert_block(&self) -> BasicBlock
-  {
-    BasicBlock(unsafe { core::LLVMGetInsertBlock(self.0)})
+  pub fn get_insert_block(&self) -> BasicBlock {
+    BasicBlock(unsafe { core::LLVMGetInsertBlock(self.0) })
   }
 
   /// Position the builder at `instr` within `block`.
-  pub fn position_at(&self, block: &BasicBlock, instr: &Value)
-  {
+  pub fn position_at(&self, block: &BasicBlock, instr: &Value) {
     unsafe { core::LLVMPositionBuilder(self.0, block.0, instr.0) }
   }
 
   /// Position the builder at the end of `block`.
-  pub fn position_at_end(&self, block: &BasicBlock)
-  {
+  pub fn position_at_end(&self, block: &BasicBlock) {
     unsafe { core::LLVMPositionBuilderAtEnd(self.0, block.0) }
   }
 
   /// Build an instruction that returns from the function with void.
-  pub fn create_ret_void(&self) -> Value
-  {
-    Value(unsafe {core::LLVMBuildRetVoid(self.0)})
+  pub fn create_ret_void(&self) -> Value {
+    Value(unsafe { core::LLVMBuildRetVoid(self.0) })
   }
 
   /// Build an instruction that returns from the function with `value`.
-  pub fn create_ret(&self, value: &Value) -> Value
-  {
-    Value(unsafe { core::LLVMBuildRet(self.0, value.0)})
+  pub fn create_ret(&self, value: &Value) -> Value {
+    Value(unsafe { core::LLVMBuildRet(self.0, value.0) })
   }
 
   /// Build an instruction that allocates an array with the element type `elem` and
   /// the size `size`.
   ///
   /// The size of this array will be the size of `elem` times `size`.
-  pub fn build_array_alloca(&self, elem: &Ty, size: &Value) -> Value
-  {
+  pub fn build_array_alloca(&self, elem: &Ty, size: &Value) -> Value {
     Value(unsafe {
-    	core::LLVMBuildArrayAlloca(self.0,
-    														 elem.0,
-    														 size.0,
-    														 NULL_NAME.as_ptr() as *const c_char)
+      core::LLVMBuildArrayAlloca(self.0, elem.0, size.0, NULL_NAME.as_ptr() as *const c_char)
     })
   }
 
@@ -178,59 +162,48 @@ impl Builder {
   ///
   /// Make sure to call `build_free` with the pointer value when you're done with it, or you're
   /// gonna have a bad time.
-  pub fn create_alloca(&self, ty: &Ty) -> Value
-  {
-    Value(unsafe {
-    	core::LLVMBuildAlloca(self.0,
-    												ty.0,
-    												NULL_NAME.as_ptr() as *const c_char)
-    })
+  pub fn create_alloca(&self, ty: &Ty) -> Value {
+    Value(unsafe { core::LLVMBuildAlloca(self.0, ty.0, NULL_NAME.as_ptr() as *const c_char) })
   }
 
   /// Build an instruction that frees the `val`, which _MUST_ be a pointer that was returned
   /// from `build_alloca`.
-  pub fn create_free(&self, val: &Value) -> Value
-  {
+  pub fn create_free(&self, val: &Value) -> Value {
     Value(unsafe { core::LLVMBuildFree(self.0, val.0) })
   }
 
   /// Build an instruction that store the value `val` in the pointer `ptr`.
-  pub fn create_store(&self, val: &Value, ptr: &Value) -> Value
-  {
+  pub fn create_store(&self, val: &Value, ptr: &Value) -> Value {
     debug_assert!(ptr.ty().is_pointer(), "The target must be a pointer type");
     Value(unsafe { core::LLVMBuildStore(self.0, val.0, ptr.0) })
   }
 
   /// Build an instruction that branches to the block `dest`.
-  pub fn create_br(&self, dest: &BasicBlock) -> Value
-  {
-    Value(unsafe { core::LLVMBuildBr(self.0, dest.0)})
+  pub fn create_br(&self, dest: &BasicBlock) -> Value {
+    Value(unsafe { core::LLVMBuildBr(self.0, dest.0) })
   }
 
   /// Build an instruction that branches to `if_block` if `cond` evaluates to true, and
   /// `else_block` otherwise.
-  pub fn create_cond_br(&self, cond: &Value,
-  	                    if_block: &BasicBlock, else_block: &BasicBlock) -> Value
-  {
+  pub fn create_cond_br(&self,
+                        cond: &Value,
+                        if_block: &BasicBlock,
+                        else_block: &BasicBlock)
+                        -> Value {
     Value(unsafe {
-    	core::LLVMBuildCondBr(self.0,
-    		                    cond.0,
-    		                    if_block.0,
-    		                    mem::transmute(else_block.0))
+      core::LLVMBuildCondBr(self.0, cond.0, if_block.0, mem::transmute(else_block.0))
     })
   }
 
   /// Build an instruction that runs whichever block matches the value, or `default` if none of
   /// them matched it.
   pub fn create_switch(&self,
-  	                   value: &Value,
-  	                   default: &BasicBlock,
-  	                   cases: &[(&Value, &BasicBlock)]) -> Value {
+                       value: &Value,
+                       default: &BasicBlock,
+                       cases: &[(&Value, &BasicBlock)])
+                       -> Value {
     Value(unsafe {
-      let switch = core::LLVMBuildSwitch(self.0,
-      	                                 value.0,
-      	                                 default.0,
-        	                                 cases.len() as c_uint);
+      let switch = core::LLVMBuildSwitch(self.0, value.0, default.0, cases.len() as c_uint);
       for case in cases {
         core::LLVMAddCase(switch, (case.0).0, (case.1).0);
       }
@@ -242,107 +215,87 @@ impl Builder {
   /// Build an instruction that calls the function `func` with the arguments `args`.
   ///
   /// This will return the return value of the function.
-  fn create_call_internal<V: LLVMRef<LLVMValueRef>>(&self, func: &Function, args: &[&V],
-                                                    tail_call: bool) -> Value
-  {
+  fn create_call_internal<V: LLVMRef<LLVMValueRef>>(&self,
+                                                    func: &Function,
+                                                    args: &[&V],
+                                                    tail_call: bool)
+                                                    -> Value {
     let ref_array = to_llvmref_array!(args, LLVMValueRef);
 
     Value(unsafe {
-        let call = core::LLVMBuildCall(self.0,
-        	                             func.0,
-                                       ref_array.as_ptr() as *mut LLVMValueRef,
-        	                             args.len() as c_uint,
-        	                             NULL_NAME.as_ptr());
-        core::LLVMSetTailCall(call, if tail_call {1} else {0});
-        call.into()
+      let call = core::LLVMBuildCall(self.0,
+                                     func.0,
+                                     ref_array.as_ptr() as *mut LLVMValueRef,
+                                     args.len() as c_uint,
+                                     NULL_NAME.as_ptr());
+      core::LLVMSetTailCall(call,
+                            if tail_call {
+                              1
+                            } else {
+                              0
+                            });
+      call.into()
     })
   }
 
   /// Build an instruction that calls the function `func` with the arguments `args`.
   ///
   /// This will return the return value of the function.
-  pub fn create_call(&self, func: &Function, args: &[&Value]) -> Value
-  {
+  pub fn create_call(&self, func: &Function, args: &[&Value]) -> Value {
     self.create_call_internal(func, args, false)
   }
 
   /// Build an instruction that calls the function `func` with the arguments `args`.
   ///
   /// This will return the return value of the function.
-  pub fn create_tail_call<V: LLVMRef<LLVMValueRef>>(&self, func: &Function, args: &[&V]) -> Value
-  {
+  pub fn create_tail_call<V: LLVMRef<LLVMValueRef>>(&self, func: &Function, args: &[&V]) -> Value {
     self.create_call_internal(func, args, true)
   }
 
   /// Build an instruction that yields to `true_val` if `cond` is equal to `1`, and `false_val`
   /// otherwise.
-  pub fn create_select(&self, cond: &Value, true_val: &Value, false_val: &Value) -> Value
-  {
+  pub fn create_select(&self, cond: &Value, true_val: &Value, false_val: &Value) -> Value {
     Value(unsafe {
-    	core::LLVMBuildSelect(
-        self.0,
-    		cond.0,
-    		true_val.0,
-    		false_val.0,
-    		NULL_NAME.as_ptr()) })
-  }
-
-  pub fn create_cast(&self, op: CastOp, value: &Value, dest_ty: &Ty) -> Value
-  {
-    let llvm_op = match op {
-      CastOp::Trunc    => LLVMOpcode::LLVMTrunc,
-      CastOp::ZExt     => LLVMOpcode::LLVMZExt,
-      CastOp::SExt     => LLVMOpcode::LLVMSExt,
-      CastOp::FPTrunc  => LLVMOpcode::LLVMFPTrunc,
-      CastOp::FPExt    => LLVMOpcode::LLVMFPExt,
-      CastOp::UIToFP   => LLVMOpcode::LLVMUIToFP,
-      CastOp::SIToFP   => LLVMOpcode::LLVMSIToFP,
-      CastOp::FPToUI   => LLVMOpcode::LLVMFPToUI,
-      CastOp::FPToSI   => LLVMOpcode::LLVMFPToUI,
-      CastOp::PtrToInt => LLVMOpcode::LLVMPtrToInt,
-      CastOp::IntToPtr => LLVMOpcode::LLVMIntToPtr,
-      CastOp::BitCast  => LLVMOpcode::LLVMBitCast
-    };
-
-    Value(unsafe { core::LLVMBuildCast(
-      self.0,
-      llvm_op,
-      value.0,
-      dest_ty.0,
-      NULL_NAME.as_ptr())})
-  }
-
-  /// Build an instruction that casts a value into a certain type.
-  pub fn create_bit_cast(&self, value: &Value, dest: &Ty) -> Value
-  {
-    Value(unsafe { core::LLVMBuildBitCast(
-    		self.0,
-    		value.0,
-    		dest.0,
-    		NULL_NAME.as_ptr())
+      core::LLVMBuildSelect(self.0, cond.0, true_val.0, false_val.0, NULL_NAME.as_ptr())
     })
   }
 
+  pub fn create_cast(&self, op: CastOp, value: &Value, dest_ty: &Ty) -> Value {
+    let llvm_op = match op {
+      CastOp::Trunc => LLVMOpcode::LLVMTrunc,
+      CastOp::ZExt => LLVMOpcode::LLVMZExt,
+      CastOp::SExt => LLVMOpcode::LLVMSExt,
+      CastOp::FPTrunc => LLVMOpcode::LLVMFPTrunc,
+      CastOp::FPExt => LLVMOpcode::LLVMFPExt,
+      CastOp::UIToFP => LLVMOpcode::LLVMUIToFP,
+      CastOp::SIToFP => LLVMOpcode::LLVMSIToFP,
+      CastOp::FPToUI => LLVMOpcode::LLVMFPToUI,
+      CastOp::FPToSI => LLVMOpcode::LLVMFPToUI,
+      CastOp::PtrToInt => LLVMOpcode::LLVMPtrToInt,
+      CastOp::IntToPtr => LLVMOpcode::LLVMIntToPtr,
+      CastOp::BitCast => LLVMOpcode::LLVMBitCast,
+    };
+
+    Value(unsafe { core::LLVMBuildCast(self.0, llvm_op, value.0, dest_ty.0, NULL_NAME.as_ptr()) })
+  }
+
+  /// Build an instruction that casts a value into a certain type.
+  pub fn create_bit_cast(&self, value: &Value, dest: &Ty) -> Value {
+    Value(unsafe { core::LLVMBuildBitCast(self.0, value.0, dest.0, NULL_NAME.as_ptr()) })
+  }
+
   /// Build an instruction that inserts a value into an aggregate data value.
-  pub fn create_insert_value(&self, agg: &Value, elem: &Value, index: usize) -> Value
-  {
+  pub fn create_insert_value(&self, agg: &Value, elem: &Value, index: usize) -> Value {
     Value(unsafe {
-    	core::LLVMBuildInsertValue(self.0,
-    		                         agg.0,
-    		                         elem.0,
-    		                         index as c_uint,
-    		                         NULL_NAME.as_ptr())
+      core::LLVMBuildInsertValue(self.0, agg.0, elem.0, index as c_uint, NULL_NAME.as_ptr())
     })
   }
 
   /// Build an instruction that extracts a value from an aggregate type.
-	pub fn create_extract_value(&self, agg: &Value, index: usize) -> Value {
+  pub fn create_extract_value(&self, agg: &Value, index: usize) -> Value {
     Value(unsafe {
-    	core::LLVMBuildExtractValue(self.0,
-    		                          agg.0,
-    		                          index as c_uint,
-    		                          NULL_NAME.as_ptr())
-   	})
+      core::LLVMBuildExtractValue(self.0, agg.0, index as c_uint, NULL_NAME.as_ptr())
+    })
   }
 
   unary_instr!{create_load, LLVMBuildLoad}
@@ -362,58 +315,46 @@ impl Builder {
 
 
   /// Build an instruction to compare two values with the predicate given.
-  pub fn create_cmp(&self, l: &Value, r: &Value, pred: Predicate) -> Value
-  {
+  pub fn create_cmp(&self, l: &Value, r: &Value, pred: Predicate) -> Value {
     self.create_cmp_internal(l, r, pred, true)
   }
 
   /// Build an instruction to compare two values with the predicate given.
-  pub fn create_ucmp(&self, l: &Value, r: &Value, pred: Predicate) -> Value
-  {
+  pub fn create_ucmp(&self, l: &Value, r: &Value, pred: Predicate) -> Value {
     self.create_cmp_internal(l, r, pred, false)
   }
 
-  fn create_cmp_internal(&self, l: &Value, r: &Value,
-  											 pred: Predicate, signed: bool) -> Value {
-  	let (lhs_ty, rhs_ty) = (l.ty(), r.ty());
+  fn create_cmp_internal(&self, l: &Value, r: &Value, pred: Predicate, signed: bool) -> Value {
+    let (lhs_ty, rhs_ty) = (l.ty(), r.ty());
     assert_eq!(lhs_ty, rhs_ty);
 
     if lhs_ty.is_integer() {
-	    let p = match (pred, signed) {
-	    	(Predicate::Eq,    _)  => LLVMIntPredicate::LLVMIntEQ,
-	    	(Predicate::Ne, _)     => LLVMIntPredicate::LLVMIntNE,
-	    	(Predicate::Lt, true)  => LLVMIntPredicate::LLVMIntSLT,
-	    	(Predicate::Lt, false) => LLVMIntPredicate::LLVMIntULT,
-	    	(Predicate::Le, true)  => LLVMIntPredicate::LLVMIntSLE,
-	    	(Predicate::Le, false) => LLVMIntPredicate::LLVMIntULE,
-	    	(Predicate::Gt, true)  => LLVMIntPredicate::LLVMIntSGT,
-	    	(Predicate::Gt, false) => LLVMIntPredicate::LLVMIntUGT,
-	    	(Predicate::Ge, true)  => LLVMIntPredicate::LLVMIntSGE,
-	    	(Predicate::Ge, false) => LLVMIntPredicate::LLVMIntUGE,
-	    };
+      let p = match (pred, signed) {
+        (Predicate::Eq, _) => LLVMIntPredicate::LLVMIntEQ,
+        (Predicate::Ne, _) => LLVMIntPredicate::LLVMIntNE,
+        (Predicate::Lt, true) => LLVMIntPredicate::LLVMIntSLT,
+        (Predicate::Lt, false) => LLVMIntPredicate::LLVMIntULT,
+        (Predicate::Le, true) => LLVMIntPredicate::LLVMIntSLE,
+        (Predicate::Le, false) => LLVMIntPredicate::LLVMIntULE,
+        (Predicate::Gt, true) => LLVMIntPredicate::LLVMIntSGT,
+        (Predicate::Gt, false) => LLVMIntPredicate::LLVMIntUGT,
+        (Predicate::Ge, true) => LLVMIntPredicate::LLVMIntSGE,
+        (Predicate::Ge, false) => LLVMIntPredicate::LLVMIntUGE,
+      };
 
-	    Value(unsafe {
-		    core::LLVMBuildICmp(self.0,
-	    		                  p,
-	     		                  l.0, r.0,
-	     		                  NULL_NAME.as_ptr())
-	    })
+      Value(unsafe { core::LLVMBuildICmp(self.0, p, l.0, r.0, NULL_NAME.as_ptr()) })
 
     } else if lhs_ty.is_float() {
-    	let p = match pred {
+      let p = match pred {
         Predicate::Eq => LLVMRealPredicate::LLVMRealOEQ,
         Predicate::Ne => LLVMRealPredicate::LLVMRealONE,
         Predicate::Gt => LLVMRealPredicate::LLVMRealOGT,
         Predicate::Ge => LLVMRealPredicate::LLVMRealOGE,
         Predicate::Lt => LLVMRealPredicate::LLVMRealOLT,
-        Predicate::Le => LLVMRealPredicate::LLVMRealOLE
+        Predicate::Le => LLVMRealPredicate::LLVMRealOLE,
       };
 
-   	  Value(unsafe {
-      	core::LLVMBuildFCmp(self.0,
-      		                 p, l.0, r.0,
-      		                 NULL_NAME.as_ptr())
-      })
+      Value(unsafe { core::LLVMBuildFCmp(self.0, p, l.0, r.0, NULL_NAME.as_ptr()) })
 
     } else {
       panic!("expected numbers, got {:?}", lhs_ty)
@@ -424,26 +365,22 @@ impl Builder {
   /// structure.
   ///
   /// Basically type-safe pointer arithmetic.
-  pub fn create_gep(&self, pointer: &Value, indices: &[&Value]) -> Value
-  {
+  pub fn create_gep(&self, pointer: &Value, indices: &[&Value]) -> Value {
     let ref_array = to_llvmref_array!(indices, LLVMValueRef);
 
     Value(unsafe {
-    	core::LLVMBuildInBoundsGEP(self.0,
-    	                           pointer.0,
-    	                           ref_array.as_ptr() as *mut LLVMValueRef,
-    	                           indices.len() as c_uint,
-    	                           NULL_NAME.as_ptr())
+      core::LLVMBuildInBoundsGEP(self.0,
+                                 pointer.0,
+                                 ref_array.as_ptr() as *mut LLVMValueRef,
+                                 indices.len() as c_uint,
+                                 NULL_NAME.as_ptr())
     })
   }
 
 
   /// Build an instruction to select a value depending on the predecessor of the current block.
-  pub fn create_phi(&self, ty: &Ty, name: &str) -> PhiNode
-  {
-	  PhiNode(unsafe {
-	  	core::LLVMBuildPhi(self.0, ty.0, ::util::chars::from_str(name))
-  	})
+  pub fn create_phi(&self, ty: &Ty, name: &str) -> PhiNode {
+    PhiNode(unsafe { core::LLVMBuildPhi(self.0, ty.0, ::util::chars::from_str(name)) })
   }
 }
 
@@ -453,10 +390,9 @@ mod tests {
   use types::LLVMTy;
   use value::{Predicate, ToValue};
 
-	#[test]
-	pub fn test_cond_br()
-	{
-		let jit = JitCompiler::new("test1").ok().unwrap();
+  #[test]
+  pub fn test_cond_br() {
+    let jit = JitCompiler::new("test1").ok().unwrap();
     let ctx = jit.context();
 
     let func_ty = jit.create_func_ty(&u64::llvm_ty(ctx), &[&u64::llvm_ty(ctx)]);
@@ -489,9 +425,7 @@ mod tests {
 
     jit.verify().unwrap();
 
-    let fib: fn(u64) -> u64 = unsafe {
-      ::std::mem::transmute(jit.get_func_ptr(&func).unwrap())
-    };
+    let fib: fn(u64) -> u64 = unsafe { ::std::mem::transmute(jit.get_func_ptr(&func).unwrap()) };
 
     for i in 0..10 {
       if i < 5 {
@@ -500,5 +434,5 @@ mod tests {
         assert_eq!(16, fib(i));
       }
     }
-	}
+  }
 }

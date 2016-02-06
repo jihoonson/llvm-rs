@@ -5,7 +5,8 @@ pub trait HasContext {
 }
 
 #[inline]
-pub fn ret_nullable_ptr<P, T>(ptr: *mut P) -> Option<T> where T:From<*mut P>
+pub fn ret_nullable_ptr<P, T>(ptr: *mut P) -> Option<T>
+  where T: From<*mut P>
 {
   if ptr.is_null() {
     None
