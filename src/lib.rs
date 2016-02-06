@@ -46,12 +46,13 @@ use llvm_sys::target_machine::LLVMCodeModel;
 
 use libc::{c_char, c_uint};
 
+pub use types::Ty;
+
 use buffer::MemoryBuffer;
 use builder::Builder;
 use value::{GlobalValue, Function, ToValue, Value, ValueIter, ValueRef};
-use types::{FunctionTy, LLVMTy, Ty};
+use types::{FunctionTy, LLVMTy};
 use util::chars;
-
 
 pub const JIT_OPT_LVEL: usize = 2;
 
@@ -445,10 +446,16 @@ impl JitCompiler {
   ///
   /// This is marked as unsafe because the defined function signature and
   /// return could be different from their internal representation.
-  pub unsafe fn get_func_ptr(&self, function: &Function) -> Option<*const ()>
+  pub unsafe fn get_func_ptr(&self, func: &Function) -> Option<*const ()>
   {
-    let ptr:*const u8 = self.get_ptr_to_global(&function.into());
+    let ptr:*const u8 = self.get_ptr_to_global(&func.into());
     Some(mem::transmute(ptr))
+  }
+
+  pub fn delete_func(&self, func: &Function) {
+    unsafe {
+      core::LLVMDeleteFunction(func.0)
+    }
   }
 }
 
