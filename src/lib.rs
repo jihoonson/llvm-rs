@@ -3,8 +3,8 @@
 extern crate libc;
 extern crate llvm_sys;
 
-#[macro_use]
-pub mod macros;
+#[macro_use] pub mod macros;
+pub mod analysis;
 pub mod block;
 pub mod buffer;
 pub mod builder;
@@ -18,7 +18,6 @@ pub use llvm_sys::prelude::LLVMContextRef;
 use std::mem;
 use std::ptr;
 
-use llvm_sys::analysis;
 use llvm_sys::core;
 use llvm_sys::prelude::{LLVMModuleRef, LLVMTypeRef, LLVMValueRef};
 use llvm_sys::bit_reader::LLVMParseBitcodeInContext;
@@ -35,6 +34,7 @@ use libc::{c_char, c_uint};
 
 pub use types::Ty;
 
+use analysis::Verifier;
 use buffer::MemoryBuffer;
 use builder::Builder;
 use value::{Function, GlobalValue, ToValue, Value, ValueIter, ValueRef};
@@ -248,13 +248,7 @@ impl JitCompiler {
   /// Verify that the module is safe to run, returning a string detailing the error
   /// when an error occurs.
   pub fn verify(&self) -> Result<(), String> {
-    unsafe {
-      let mut error = mem::uninitialized();
-      let action = analysis::LLVMVerifierFailureAction::LLVMReturnStatusAction;
-      let ret = analysis::LLVMVerifyModule(self.module, action, &mut error);
-
-      llvm_ret!(ret, (), error)
-    }
+    Verifier::verify_module(self.module)
   }
 
   /// Dump the module to stderr (for debugging).

@@ -4,6 +4,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/Lint.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -30,6 +31,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Vectorize.h"
 #include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm-c/Analysis.h"
 #include "llvm-c/Core.h"
 #include "llvm-c/BitReader.h"
 #include "llvm-c/ExecutionEngine.h"
@@ -48,6 +50,28 @@ extern "C" LLVMValueRef LLVMGetOrInsertGlobal(LLVMModuleRef M,
                                               const char* Name,
                                               LLVMTypeRef Ty) {
   return wrap(unwrap(M)->getOrInsertGlobal(Name, unwrap(Ty)));
+}
+
+extern "C" bool LLVMVerifyFunction2(LLVMValueRef Fn,
+                               LLVMVerifierFailureAction Action,
+                               char **OutMessages) {
+  raw_ostream *DebugOS = Action != LLVMReturnStatusAction ? &errs() : nullptr;
+  std::string Messages;
+  raw_string_ostream MsgsOS(Messages);
+
+  LLVMBool Result = verifyFunction(*unwrap<Function>(Fn), OutMessages ? &MsgsOS : DebugOS);
+
+  // Duplicate the output to stderr.
+  if (DebugOS && OutMessages)
+    *DebugOS << MsgsOS.str();
+
+  if (Action == LLVMAbortProcessAction && Result)
+     report_fatal_error("Broken function found, compilation aborted!");
+
+  if (OutMessages)
+    *OutMessages = strdup(MsgsOS.str().c_str());
+    
+  return Result;
 }
 
 extern "C" uint32_t LLVMVersionMajor() {
