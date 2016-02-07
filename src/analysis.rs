@@ -9,8 +9,10 @@ use value::Function;
 
 // Extended APIs, offering more APIs than LLVM C API does.
 extern "C" {
-  pub fn LLVMVerifyFunction2(f: LLVMValueRef, Action: LLVMVerifierFailureAction,
-    OutMessage: *mut *mut c_char) -> c_int;
+  pub fn LLVMVerifyFunction2(f: LLVMValueRef,
+                             Action: LLVMVerifierFailureAction,
+                             OutMessage: *mut *mut c_char)
+                             -> c_int;
 }
 
 /// IR Verifier
@@ -35,8 +37,8 @@ impl Verifier {
     unsafe {
       let mut error = ::std::mem::uninitialized();
       let res = LLVMVerifyFunction2(func.0,
-                                LLVMVerifierFailureAction::LLVMReturnStatusAction,
-                                &mut error);
+                                    LLVMVerifierFailureAction::LLVMReturnStatusAction,
+                                    &mut error);
 
       llvm_ret!(res, (), error)
     }

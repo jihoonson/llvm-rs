@@ -3,7 +3,7 @@
 extern crate libc;
 extern crate llvm_sys;
 
-#[macro_use] pub mod macros;
+#[macro_use]pub mod macros;
 pub mod analysis;
 pub mod block;
 pub mod buffer;
@@ -52,7 +52,6 @@ pub enum AddressSpace {
   Const = 4,
   Local = 5,
 }
-
 
 pub trait LLVMRef<T> {
   fn as_ref(&self) -> T;
