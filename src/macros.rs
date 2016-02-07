@@ -3,7 +3,9 @@ macro_rules! llvm_ret(
     if $ret == 0 {
       Ok($out)
     } else {
-      Err(::util::chars::to_str($err).to_string())
+      let ret = Err(::util::chars::to_str($err).to_string());
+      ::libc::free($err as *mut ::libc::c_void);
+      ret
     }
   );
   ($ret:expr, $err_msg:expr) => (

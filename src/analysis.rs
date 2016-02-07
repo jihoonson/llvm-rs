@@ -1,7 +1,7 @@
 //! Analysis Module
 
 use std::mem;
-use libc::{self, c_char, c_int};
+use libc::{c_char, c_int};
 use llvm_sys::analysis::{self, LLVMVerifierFailureAction};
 use llvm_sys::prelude::{LLVMModuleRef, LLVMValueRef};
 
@@ -25,9 +25,7 @@ impl Verifier {
       let action = analysis::LLVMVerifierFailureAction::LLVMReturnStatusAction;
       let res = analysis::LLVMVerifyModule(module, action, &mut error);
 
-      let ret = llvm_ret!(res, (), error);
-      libc::free(error as *mut libc::c_void);
-      ret
+      llvm_ret!(res, (), error)
     }
   }
 
@@ -40,9 +38,7 @@ impl Verifier {
                                 LLVMVerifierFailureAction::LLVMReturnStatusAction,
                                 &mut error);
 
-      let ret = llvm_ret!(res, (), error);
-      libc::free(error as *mut libc::c_void);
-      ret
+      llvm_ret!(res, (), error)
     }
   }
 }
