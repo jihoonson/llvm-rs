@@ -22,12 +22,13 @@ use llvm_sys::analysis;
 use llvm_sys::core;
 use llvm_sys::prelude::{LLVMModuleRef, LLVMTypeRef, LLVMValueRef};
 use llvm_sys::bit_reader::LLVMParseBitcodeInContext;
-use llvm_sys::execution_engine::{LLVMAddGlobalMapping, LLVMAddModule, LLVMExecutionEngineRef,
-                                 LLVMGetPointerToGlobal, LLVMRemoveModule, LLVMLinkInMCJIT,
-                                 LLVMMCJITCompilerOptions, LLVMCreateMCJITCompilerForModule};
+use llvm_sys::execution_engine::{LLVMAddGlobalMapping, LLVMAddModule,
+                                 LLVMCreateMCJITCompilerForModule, LLVMExecutionEngineRef,
+                                 LLVMGetPointerToGlobal, LLVMLinkInMCJIT,
+                                 LLVMMCJITCompilerOptions, LLVMRemoveModule};
 use llvm_sys::linker;
 use llvm_sys::transforms::pass_manager_builder as pass;
-use llvm_sys::target::{LLVM_InitializeNativeTarget, LLVM_InitializeNativeAsmPrinter};
+use llvm_sys::target::{LLVM_InitializeNativeAsmPrinter, LLVM_InitializeNativeTarget};
 use llvm_sys::target_machine::LLVMCodeModel;
 
 use libc::{c_char, c_uint};
@@ -36,7 +37,7 @@ pub use types::Ty;
 
 use buffer::MemoryBuffer;
 use builder::Builder;
-use value::{GlobalValue, Function, ToValue, Value, ValueIter, ValueRef};
+use value::{Function, GlobalValue, ToValue, Value, ValueIter, ValueRef};
 use types::{FunctionTy, LLVMTy};
 use util::chars;
 

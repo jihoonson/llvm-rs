@@ -2,14 +2,14 @@
 
 use std::mem;
 
-use llvm_sys::{core, LLVMIntPredicate, LLVMOpcode, LLVMRealPredicate};
+use llvm_sys::{LLVMIntPredicate, LLVMOpcode, LLVMRealPredicate, core};
 use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef};
 use libc::{c_char, c_uint};
 
 use super::LLVMRef;
 use types::Ty;
 use block::BasicBlock;
-use value::{Function, Value, ValueRef, Predicate, PhiNode};
+use value::{Function, PhiNode, Predicate, Value, ValueRef};
 
 static NULL_NAME: [c_char; 1] = [0];
 

@@ -2,7 +2,7 @@
 use std::fmt;
 use std::mem;
 
-use llvm_sys::{core, LLVMTypeKind};
+use llvm_sys::{LLVMTypeKind, core};
 use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 use libc::c_uint;
 

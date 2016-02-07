@@ -6,7 +6,7 @@ use libc::{c_char, c_int, c_uint, c_ulonglong};
 use llvm_sys::analysis;
 use llvm_sys::core;
 use llvm_sys::LLVMAttribute;
-use llvm_sys::prelude::{LLVMValueRef, LLVMContextRef};
+use llvm_sys::prelude::{LLVMContextRef, LLVMValueRef};
 
 use super::LLVMRef;
 use types::{FunctionTy, LLVMTy, Ty};
@@ -362,7 +362,8 @@ pub enum Attribute {
   StackProtect = 0b100000000000000,
   /// Stack protection required.
   StackProtectReq = 0b1000000000000000,
-  /// Alignment of parameter (5 bits) stored as log2 of alignment with +1 bias 0 means unaligned (different from align(1)).
+  /// Alignment of parameter (5 bits) stored as log2 of alignment with +1 bias 0 means unaligned
+  /// (different from align(1)).
   Alignment = 0b10000000000000000,
   /// Function creates no aliases of pointer.
   NoCapture = 0b100000000000000000,
@@ -374,7 +375,8 @@ pub enum Attribute {
   Naked = 0b100000000000000000000,
   /// The source language has marked this function as inline.
   InlineHint = 0b1000000000000000000000,
-  /// Alignment of stack for function (3 bits) stored as log2 of alignment with +1 bias 0 means unaligned (different from alignstack=(1)).
+  /// Alignment of stack for function (3 bits) stored as log2 of alignment with +1 bias 0 means
+  /// unaligned (different from alignstack=(1)).
   StackAlignment = 0b11100000000000000000000000000,
   /// This function returns twice.
   ReturnsTwice = 0b100000000000000000000000000000,
