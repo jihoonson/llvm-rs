@@ -146,7 +146,7 @@ impl LLVMTy for isize {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use super::super::*;
+  use super::super::JitCompiler;
 
   #[test]
   pub fn test_types() {
