@@ -3,12 +3,12 @@ use std::fmt;
 use std::mem;
 
 use libc::{c_char, c_int, c_uint, c_ulonglong};
-use llvm_sys::analysis;
 use llvm_sys::core;
 use llvm_sys::LLVMAttribute;
 use llvm_sys::prelude::{LLVMContextRef, LLVMValueRef};
 
 use super::LLVMRef;
+use analysis::Verifier;
 use types::{FunctionTy, LLVMTy, Ty};
 use block::BasicBlock;
 use util::HasContext;
@@ -306,12 +306,7 @@ impl Function {
   }
 
   pub fn verify(&self) -> Result<(), String> {
-    unsafe {
-      let action = analysis::LLVMVerifierFailureAction::LLVMReturnStatusAction;
-      let ret = analysis::LLVMVerifyFunction(self.0, action);
-
-      llvm_ret!(ret, "function is not valid")
-    }
+    Verifier::verify_func(self)
   }
 }
 
