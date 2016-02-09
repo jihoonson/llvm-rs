@@ -171,22 +171,8 @@ impl JitCompiler {
   }
 
   /// Get the data layout of the base module
-  pub fn get_data_layout(&self) -> &str {
+  pub fn data_layout(&self) -> &str {
     self.module.data_layout()
-  }
-
-  /// Link a module into this module, returning an error string if an error occurs.
-  ///
-  /// This *does not* destroy the source module.
-  pub fn link(&self, m: &Module) -> Result<(), String> {
-    self.module.link(m)
-  }
-
-  /// Link a module into this module, returning an error string if an error occurs.
-  ///
-  /// This *does* destroy the source module.
-  pub fn link_destroy(&self, m: &Module) -> Result<(), String> {
-    self.module.link_destroy(m)
   }
 
   /// Add a module to the list of modules to interpret or compile.
