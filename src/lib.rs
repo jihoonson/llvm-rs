@@ -8,6 +8,7 @@ pub mod analysis;
 pub mod block;
 pub mod buffer;
 pub mod builder;
+pub mod module;
 pub mod util;
 pub mod types;
 pub mod value;
@@ -64,11 +65,12 @@ extern "C" {
   pub fn LLVMVersionMinor() -> u32;
 }
 
-fn new_module(ctx: LLVMContextRef, name: &str) -> LLVMModuleRef {
-  let c_name = util::chars::from_str(name);
+pub fn new_module(ctx: LLVMContextRef, name: &str) -> LLVMModuleRef {
+  let c_name = chars::from_str(name);
   unsafe { core::LLVMModuleCreateWithNameInContext(c_name, ctx) }
 }
-fn new_module_from_bc(ctx: LLVMContextRef, path: &str) -> Result<LLVMModuleRef, String> {
+
+pub fn new_module_from_bc(ctx: LLVMContextRef, path: &str) -> Result<LLVMModuleRef, String> {
   unsafe {
     let mut out: LLVMModuleRef = mem::uninitialized();
     let mut err: *mut c_char = mem::uninitialized();
@@ -439,6 +441,12 @@ mod tests {
 
   pub extern "C" fn test_extern_fn(x: u64) -> u64 {
     x
+  }
+
+  #[test]
+  fn test_jit() {
+    let jit = JitCompiler::new("test_jit").ok().unwrap();
+    jit.verify().unwrap();
   }
 
   #[test]
