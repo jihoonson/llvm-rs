@@ -13,13 +13,13 @@ pub mod types;
 pub mod value;
 
 // public reimports from llvm_sys;
-pub use llvm_sys::prelude::LLVMContextRef;
+pub use llvm_sys::prelude::{LLVMContextRef, LLVMModuleRef, LLVMValueRef};
 
 use std::mem;
 use std::ptr;
 
 use llvm_sys::core;
-use llvm_sys::prelude::{LLVMModuleRef, LLVMTypeRef, LLVMValueRef};
+use llvm_sys::prelude::LLVMTypeRef;
 use llvm_sys::bit_reader::LLVMParseBitcodeInContext;
 use llvm_sys::execution_engine::{LLVMAddGlobalMapping, LLVMAddModule,
                                  LLVMCreateMCJITCompilerForModule, LLVMExecutionEngineRef,

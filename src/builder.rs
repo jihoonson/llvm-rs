@@ -386,7 +386,7 @@ impl Builder {
 
 #[cfg(test)]
 mod tests {
-  use super::super::*;
+  use super::super::JitCompiler;
   use types::LLVMTy;
   use value::{Predicate, ToValue};
 

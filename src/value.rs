@@ -463,9 +463,7 @@ impl<T: From<LLVMValueRef>> Iterator for ValueIter<T> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use super::super::*;
-
-  use llvm_sys::prelude::LLVMValueRef;
+  use super::super::{JitCompiler, LLVMRef, LLVMValueRef};
 
   #[test]
   pub fn test_values() {
