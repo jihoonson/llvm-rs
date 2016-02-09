@@ -14,10 +14,21 @@ use value::{Function, GlobalValue, Value, ValueIter, ValueRef};
 use types::{FunctionTy, Ty};
 use util::chars;
 
+/// LLVM Module
+///
+/// ExecutionEngine can own Module. In this case, ExecutionEngine will dispose Module.
+/// So, the bool flag means its ownership. Only if it is true, Drop will be executed.
 #[derive(Clone)]
 pub struct Module(pub LLVMModuleRef);
-impl_dispose!(Module, core::LLVMDisposeModule);
+//impl_dispose!(Module, core::LLVMDisposeModule);
 impl_from_ref!(LLVMModuleRef, Module);
+
+impl Drop for Module {
+  fn drop(&mut self) {
+    //unsafe { core::LLVMDisposeModule(self.0); }
+  }
+}
+
 
 impl Module {
   pub fn new(ctx: LLVMContextRef, name: &str) -> Module {
@@ -25,7 +36,7 @@ impl Module {
     Module(unsafe { core::LLVMModuleCreateWithNameInContext(c_name, ctx) })
   }
 
-  pub fn new_from_bc(ctx: LLVMContextRef, path: &str) -> Result<Module, String> {
+  pub fn from_bc(ctx: LLVMContextRef, path: &str) -> Result<Module, String> {
     unsafe {
       let mut m: LLVMModuleRef = mem::uninitialized();
       let mut err: *mut c_char = mem::uninitialized();
@@ -55,11 +66,11 @@ impl Module {
   /// Link a module into this module, returning an error string if an error occurs.
   ///
   /// This *does not* destroy the source module.
-  pub fn link(&self, other: Module) -> Result<(), String> {
+  pub fn link(&self, m: &Module) -> Result<(), String> {
     unsafe {
       let mut error = mem::uninitialized();
       let ret = linker::LLVMLinkModules(self.0,
-                                        other.0,
+                                        m.0,
                                         linker::LLVMLinkerMode::LLVMLinkerPreserveSource,
                                         &mut error);
       llvm_ret!(ret, (), error)
@@ -69,11 +80,11 @@ impl Module {
   /// Link a module into this module, returning an error string if an error occurs.
   ///
   /// This *does* destroy the source module.
-  pub fn link_destroy(&self, other: Module) -> Result<(), String> {
+  pub fn link_destroy(&self, m: &Module) -> Result<(), String> {
     unsafe {
       let mut error = mem::uninitialized();
       let ret = linker::LLVMLinkModules(self.0,
-                                        other.0,
+                                        m.0,
                                         linker::LLVMLinkerMode::LLVMLinkerDestroySource,
                                         &mut error);
       llvm_ret!(ret, (), error)

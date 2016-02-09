@@ -18,16 +18,14 @@ pub use llvm_sys::prelude::{LLVMContextRef, LLVMModuleRef, LLVMValueRef};
 
 use std::mem;
 use std::ptr;
+use std::rc::Rc;
 
 use llvm_sys::core;
 use llvm_sys::prelude::LLVMTypeRef;
-use llvm_sys::bit_reader::LLVMParseBitcodeInContext;
 use llvm_sys::execution_engine::{LLVMAddGlobalMapping, LLVMAddModule,
                                  LLVMCreateMCJITCompilerForModule, LLVMExecutionEngineRef,
                                  LLVMGetPointerToGlobal, LLVMLinkInMCJIT,
                                  LLVMMCJITCompilerOptions, LLVMRemoveModule};
-use llvm_sys::linker;
-use llvm_sys::transforms::pass_manager_builder as pass;
 use llvm_sys::target::{LLVM_InitializeNativeAsmPrinter, LLVM_InitializeNativeTarget};
 use llvm_sys::target_machine::LLVMCodeModel;
 
@@ -36,13 +34,11 @@ use libc::{c_char, c_uint};
 pub use analysis::Verifier;
 pub use block::BasicBlock;
 pub use builder::{Builder, CastOp};
+pub use module::Module;
 pub use types::Ty;
 pub use value::{Arg, Function, GlobalValue, Predicate, ToValue, Value, ValueIter, ValueRef};
 
-
-use buffer::MemoryBuffer;
 use types::{FunctionTy, LLVMTy};
-use util::chars;
 
 pub const JIT_OPT_LVEL: usize = 2;
 
@@ -65,23 +61,8 @@ extern "C" {
   pub fn LLVMVersionMinor() -> u32;
 }
 
-pub fn new_module(ctx: LLVMContextRef, name: &str) -> LLVMModuleRef {
-  let c_name = chars::from_str(name);
-  unsafe { core::LLVMModuleCreateWithNameInContext(c_name, ctx) }
-}
-
-pub fn new_module_from_bc(ctx: LLVMContextRef, path: &str) -> Result<LLVMModuleRef, String> {
-  unsafe {
-    let mut out: LLVMModuleRef = mem::uninitialized();
-    let mut err: *mut c_char = mem::uninitialized();
-    let buf = try!(MemoryBuffer::from_file(path));
-
-    let ret = LLVMParseBitcodeInContext(ctx, buf.as_ptr(), &mut out, &mut err);
-    llvm_ret!(ret, out, err)
-  }
-}
-
-fn new_jit_ee(m: LLVMModuleRef, opt_lv: usize) -> Result<LLVMExecutionEngineRef, String> {
+fn new_jit_ee(m: &Module, opt_lv: usize) -> Result<LLVMExecutionEngineRef, String> {
+  // Transfer its ownership to ExecutionEngine.
   unsafe {
     let mut ee: LLVMExecutionEngineRef = mem::uninitialized();
     let mut err: *mut c_char = mem::uninitialized();
@@ -95,7 +76,7 @@ fn new_jit_ee(m: LLVMModuleRef, opt_lv: usize) -> Result<LLVMExecutionEngineRef,
     let mut opts = new_mcjit_compiler_options(opt_lv);
     let opts_size = mem::size_of::<LLVMMCJITCompilerOptions>();
 
-    let ret = LLVMCreateMCJITCompilerForModule(&mut ee, m, &mut opts, opts_size as u64, &mut err);
+    let ret = LLVMCreateMCJITCompilerForModule(&mut ee, m.0, &mut opts, opts_size as u64, &mut err);
     llvm_ret!(ret, ee, err)
   }
 }
@@ -112,7 +93,7 @@ fn new_mcjit_compiler_options(opt_lv: usize) -> LLVMMCJITCompilerOptions {
 
 pub struct JitCompiler {
   ctx: LLVMContextRef,
-  module: LLVMModuleRef,
+  module: Rc<Module>,
   ee: LLVMExecutionEngineRef,
   builder: Builder,
 
@@ -130,18 +111,18 @@ pub struct JitCompiler {
 impl JitCompiler {
   pub fn new(module_name: &str) -> Result<JitCompiler, String> {
     let ctx = unsafe { core::LLVMContextCreate() };
-    let module = new_module(ctx, module_name);
+    let module = Rc::new(Module::new(ctx, module_name));
     JitCompiler::new_internal(ctx, module)
   }
 
-  pub fn new_from_bc(bitcode_path: &str) -> Result<JitCompiler, String> {
+  pub fn from_bc(bitcode_path: &str) -> Result<JitCompiler, String> {
     let ctx = unsafe { core::LLVMContextCreate() };
-    let module = try!(new_module_from_bc(ctx, bitcode_path));
+    let module = Rc::new(try!(Module::from_bc(ctx, bitcode_path)));
     JitCompiler::new_internal(ctx, module)
   }
 
-  fn new_internal(ctx: LLVMContextRef, module: LLVMModuleRef) -> Result<JitCompiler, String> {
-    let ee = try!(new_jit_ee(module, JIT_OPT_LVEL));
+  fn new_internal(ctx: LLVMContextRef, module: Rc<Module>) -> Result<JitCompiler, String> {
+    let ee = try!(new_jit_ee(&module, JIT_OPT_LVEL));
     let builder = Builder(unsafe { core::LLVMCreateBuilderInContext(ctx) });
 
     Ok(JitCompiler {
@@ -165,8 +146,8 @@ impl JitCompiler {
   pub fn context(&self) -> LLVMContextRef {
     self.ctx
   }
-  pub fn module(&self) -> LLVMModuleRef {
-    self.module
+  pub fn module(&self) -> &Module {
+    &self.module
   }
   pub fn engine(&self) -> LLVMExecutionEngineRef {
     self.ee
@@ -176,59 +157,39 @@ impl JitCompiler {
   }
 
   /// Returns the target data of the base module represented as a string
-  pub fn get_target(&self) -> &str {
-    unsafe {
-      let target = core::LLVMGetTarget(self.module);
-      chars::to_str(target)
-    }
+  pub fn target(&self) -> &str {
+    self.module.target()
   }
 
   /// Get the data layout of the base module
   pub fn get_data_layout(&self) -> &str {
-    unsafe {
-      let layout = core::LLVMGetDataLayout(self.module);
-      chars::to_str(layout as *mut c_char)
-    }
+    self.module.data_layout()
   }
 
   /// Link a module into this module, returning an error string if an error occurs.
   ///
   /// This *does not* destroy the source module.
-  pub fn link(&self, module: LLVMModuleRef) -> Result<(), String> {
-    unsafe {
-      let mut error = mem::uninitialized();
-      let ret = linker::LLVMLinkModules(self.module,
-                                        module,
-                                        linker::LLVMLinkerMode::LLVMLinkerPreserveSource,
-                                        &mut error);
-      llvm_ret!(ret, (), error)
-    }
+  pub fn link(&self, m: &Module) -> Result<(), String> {
+    self.module.link(m)
   }
 
   /// Link a module into this module, returning an error string if an error occurs.
   ///
   /// This *does* destroy the source module.
-  pub fn link_destroy(&self, module: LLVMModuleRef) -> Result<(), String> {
-    unsafe {
-      let mut error = mem::uninitialized();
-      let ret = linker::LLVMLinkModules(self.module,
-                                        module,
-                                        linker::LLVMLinkerMode::LLVMLinkerDestroySource,
-                                        &mut error);
-      llvm_ret!(ret, (), error)
-    }
+  pub fn link_destroy(&self, m: &Module) -> Result<(), String> {
+    self.module.link_destroy(m)
   }
 
   /// Add a module to the list of modules to interpret or compile.
-  pub fn add_module(&self, module: &LLVMModuleRef) {
-    unsafe { LLVMAddModule(self.ee, *module) }
+  pub fn add_module(&self, m: &Module) {
+    unsafe { LLVMAddModule(self.ee, m.0) }
   }
 
   /// Remove a module from the list of modules to interpret or compile.
-  pub fn remove_module(&self, module: &LLVMModuleRef) -> LLVMModuleRef {
+  pub fn remove_module(&self, m: &Module) -> LLVMModuleRef {
     unsafe {
       let mut out = mem::uninitialized();
-      LLVMRemoveModule(self.ee, *module, &mut out, ptr::null_mut());
+      LLVMRemoveModule(self.ee, m.0, &mut out, ptr::null_mut());
       out
     }
   }
@@ -237,28 +198,18 @@ impl JitCompiler {
   ///
   /// This runs passes depending on the levels given.
   pub fn optimize(&self, opt_level: usize, size_level: usize) {
-    unsafe {
-      let builder = pass::LLVMPassManagerBuilderCreate();
-      pass::LLVMPassManagerBuilderSetOptLevel(builder, opt_level as c_uint);
-      pass::LLVMPassManagerBuilderSetSizeLevel(builder, size_level as c_uint);
-      let pass_manager = core::LLVMCreatePassManager();
-      pass::LLVMPassManagerBuilderPopulateModulePassManager(builder, pass_manager);
-      pass::LLVMPassManagerBuilderDispose(builder);
-      core::LLVMRunPassManager(pass_manager, self.module);
-    }
+    self.module.optimize(opt_level, size_level)
   }
 
   /// Verify that the module is safe to run, returning a string detailing the error
   /// when an error occurs.
   pub fn verify(&self) -> Result<(), String> {
-    Verifier::verify_module(self.module)
+    self.module.verify()
   }
 
   /// Dump the module to stderr (for debugging).
   pub fn dump(&self) {
-    unsafe {
-      core::LLVMDumpModule(self.module);
-    }
+    self.module.dump()
   }
 
   pub fn new_builder(&self) -> Builder {
@@ -267,11 +218,7 @@ impl JitCompiler {
 
   /// Returns the type with the name given, or `None`` if no type with that name exists.
   pub fn get_ty(&self, name: &str) -> Option<Ty> {
-    let c_name = chars::from_str(name);
-    unsafe {
-      let ty = core::LLVMGetTypeByName(self.module, c_name);
-      ::util::ret_nullable_ptr(ty)
-    }
+    self.module.get_ty(name)
   }
 
   /// Make a new pointer with the given element type.
@@ -325,41 +272,27 @@ impl JitCompiler {
 
   /// Add an external global to the module with the given type and name.
   pub fn add_global(&self, name: &str, ty: &Ty) -> GlobalValue {
-    let c_name = chars::from_str(name);
-    GlobalValue(unsafe { core::LLVMAddGlobal(self.module, ty.0, c_name) })
+    self.module.add_global(name, ty)
   }
 
   /// Add a global in the given address space to the module with the given type and name.
   pub fn add_global_in_addr_space(&self, name: &str, ty: &Ty, sp: AddressSpace) -> GlobalValue {
-    let c_name = chars::from_str(name);
-    GlobalValue(unsafe {
-      core::LLVMAddGlobalInAddressSpace(self.module, ty.0, c_name, sp as c_uint)
-    })
+    self.module.add_global_in_addr_space(name, ty, sp)
   }
 
   /// Add a constant global to the module with the given type, name and value.
   pub fn add_global_constant(&self, name: &str, val: &Value) -> GlobalValue {
-    let c_name = chars::from_str(name);
-    GlobalValue(unsafe {
-      let global = core::LLVMAddGlobal(self.module, val.ty().0, c_name);
-      core::LLVMSetInitializer(global, val.0);
-      global
-    })
+    self.module.add_global_constant(name, val)
   }
 
   /// Get the global with the name given, or `None` if no global with that name exists.
   pub fn get_global(&self, name: &str) -> Option<GlobalValue> {
-    let c_name = chars::from_str(name);
-    unsafe {
-      let ptr = core::LLVMGetNamedGlobal(self.module, c_name);
-      ::util::ret_nullable_ptr(ptr)
-    }
+    self.module.get_global(name)
   }
 
   /// Get an iterator of global values
   pub fn global_values(&self) -> ValueIter<GlobalValue> {
-    ValueIter::new(unsafe { core::LLVMGetFirstGlobal(self.module) },
-                   core::LLVMGetNextGlobal)
+    self.module.global_values()
   }
 
   /// Returns a pointer to the global value given.
@@ -379,17 +312,12 @@ impl JitCompiler {
 
   /// Add a function to the module with the name given.
   pub fn add_func(&self, name: &str, sig: &FunctionTy) -> Function {
-    let c_name = chars::from_str(name);
-    Function(unsafe { core::LLVMAddFunction(self.module, c_name, sig.0) })
+    self.module.add_func(name, sig)
   }
 
   /// Returns the function with the name given, or `None` if no function with that name exists.
   pub fn get_func(&self, name: &str) -> Option<Function> {
-    let c_name = chars::from_str(name);
-    unsafe {
-      let ty = core::LLVMGetNamedFunction(self.module, c_name);
-      ::util::ret_nullable_ptr(ty)
-    }
+    self.module.get_func(name)
   }
 
   /// Returns the function after creating prototype and initialize the entry block
@@ -427,7 +355,6 @@ impl JitCompiler {
 impl Drop for JitCompiler {
   fn drop(&mut self) {
     unsafe {
-      core::LLVMDisposeModule(self.module);
       core::LLVMContextDispose(self.ctx);
     }
   }
@@ -450,12 +377,6 @@ mod tests {
   }
 
   #[test]
-  fn test_jit() {
-    let jit = JitCompiler::new("test_jit").ok().unwrap();
-    jit.verify().unwrap();
-  }
-
-  #[test]
   fn test_global_mapping() {
     let jit = JitCompiler::new("test_jit").ok().unwrap();
     let ctx = jit.context();
@@ -464,13 +385,18 @@ mod tests {
     let fn_ptr: *const c_void = unsafe { ::std::mem::transmute(test_extern_fn) };
     unsafe { jit.add_global_mapping(&func, fn_ptr) };
 
+    println!("before transmute");
     let same: fn(u64) -> u64 = unsafe { ::std::mem::transmute(jit.get_func_ptr(&func).unwrap()) };
+    println!("after transmute");
 
     for i in 0..10 {
       assert_eq!(i, same(i));
     }
 
+    println!("after execute same");
+
     jit.verify().unwrap();
+    println!("after verify");
   }
 
   #[test]
