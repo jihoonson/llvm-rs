@@ -18,7 +18,6 @@ pub use llvm_sys::prelude::{LLVMContextRef, LLVMModuleRef, LLVMValueRef};
 
 use std::mem;
 use std::ptr;
-use std::rc::Rc;
 
 use llvm_sys::core;
 use llvm_sys::prelude::LLVMTypeRef;
@@ -93,7 +92,7 @@ fn new_mcjit_compiler_options(opt_lv: usize) -> LLVMMCJITCompilerOptions {
 
 pub struct JitCompiler {
   ctx: LLVMContextRef,
-  module: Rc<Module>,
+  module: Module,
   ee: LLVMExecutionEngineRef,
   builder: Builder,
 
@@ -111,17 +110,19 @@ pub struct JitCompiler {
 impl JitCompiler {
   pub fn new(module_name: &str) -> Result<JitCompiler, String> {
     let ctx = unsafe { core::LLVMContextCreate() };
-    let module = Rc::new(Module::new(ctx, module_name));
+    let module = Module::new(ctx, module_name);
     JitCompiler::new_internal(ctx, module)
   }
 
   pub fn from_bc(bitcode_path: &str) -> Result<JitCompiler, String> {
     let ctx = unsafe { core::LLVMContextCreate() };
-    let module = Rc::new(try!(Module::from_bc(ctx, bitcode_path)));
+    let module = try!(Module::from_bc(ctx, bitcode_path));
     JitCompiler::new_internal(ctx, module)
   }
 
-  fn new_internal(ctx: LLVMContextRef, module: Rc<Module>) -> Result<JitCompiler, String> {
+  fn new_internal(ctx: LLVMContextRef, mut module: Module) -> Result<JitCompiler, String> {
+    module.forget();
+
     let ee = try!(new_jit_ee(&module, JIT_OPT_LVEL));
     let builder = Builder(unsafe { core::LLVMCreateBuilderInContext(ctx) });
 

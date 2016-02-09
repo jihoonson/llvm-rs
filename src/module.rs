@@ -19,21 +19,43 @@ use util::chars;
 /// ExecutionEngine can own Module. In this case, ExecutionEngine will dispose Module.
 /// So, the bool flag means its ownership. Only if it is true, Drop will be executed.
 #[derive(Clone)]
-pub struct Module(pub LLVMModuleRef);
-//impl_dispose!(Module, core::LLVMDisposeModule);
-impl_from_ref!(LLVMModuleRef, Module);
+pub struct Module(pub LLVMModuleRef, pub bool);
 
-impl Drop for Module {
-  fn drop(&mut self) {
-    //unsafe { core::LLVMDisposeModule(self.0); }
+impl LLVMRef<LLVMModuleRef> for Module {
+  #[inline]
+  fn as_ref(&self) -> LLVMModuleRef {
+    self.0
   }
 }
 
+impl From<Module> for LLVMModuleRef {
+  #[inline]
+  fn from(w: Module) -> Self {
+    w.0
+  }
+}
+
+impl Drop for Module {
+  fn drop(&mut self) {
+    // Dispose it only if it has its ownership
+    if self.1 {
+      unsafe {
+        core::LLVMDisposeModule(self.0);
+      }
+    }
+  }
+}
 
 impl Module {
+  /// Forget its ownership
+  pub fn forget(&mut self) {
+    self.1 = false;
+  }
+
   pub fn new(ctx: LLVMContextRef, name: &str) -> Module {
     let c_name = chars::from_str(name);
-    Module(unsafe { core::LLVMModuleCreateWithNameInContext(c_name, ctx) })
+    Module(unsafe { core::LLVMModuleCreateWithNameInContext(c_name, ctx) },
+           true)
   }
 
   pub fn from_bc(ctx: LLVMContextRef, path: &str) -> Result<Module, String> {
@@ -43,7 +65,7 @@ impl Module {
       let buf = try!(MemoryBuffer::from_file(path));
 
       let ret = LLVMParseBitcodeInContext(ctx, buf.as_ptr(), &mut m, &mut err);
-      llvm_ret!(ret, Module(m), err)
+      llvm_ret!(ret, Module(m, true), err)
     }
   }
 
@@ -137,9 +159,7 @@ impl Module {
   /// Add a global in the given address space to the module with the given type and name.
   pub fn add_global_in_addr_space(&self, name: &str, ty: &Ty, sp: AddressSpace) -> GlobalValue {
     let c_name = chars::from_str(name);
-    GlobalValue(unsafe {
-      core::LLVMAddGlobalInAddressSpace(self.0, ty.0, c_name, sp as c_uint)
-    })
+    GlobalValue(unsafe { core::LLVMAddGlobalInAddressSpace(self.0, ty.0, c_name, sp as c_uint) })
   }
 
   /// Add a constant global to the module with the given type, name and value.
