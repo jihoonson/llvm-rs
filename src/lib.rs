@@ -32,12 +32,12 @@ use llvm_sys::target_machine::LLVMCodeModel;
 
 use libc::{c_char, c_uint};
 
+pub use analysis::Verifier;
 pub use types::Ty;
+pub use value::{Function, GlobalValue, ToValue, Value, ValueIter, ValueRef};
+pub use builder::Builder;
 
-use analysis::Verifier;
 use buffer::MemoryBuffer;
-use builder::Builder;
-use value::{Function, GlobalValue, ToValue, Value, ValueIter, ValueRef};
 use types::{FunctionTy, LLVMTy};
 use util::chars;
 
