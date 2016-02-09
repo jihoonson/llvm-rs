@@ -109,15 +109,23 @@ pub struct JitCompiler {
 
 impl JitCompiler {
   pub fn new(module_name: &str) -> Result<JitCompiler, String> {
-    let ctx = unsafe { core::LLVMContextCreate() };
+    let ctx = JitCompiler::create_llvm_ctx();
     let module = Module::new(ctx, module_name);
     JitCompiler::new_internal(ctx, module)
   }
 
   pub fn from_bc(bitcode_path: &str) -> Result<JitCompiler, String> {
-    let ctx = unsafe { core::LLVMContextCreate() };
+    let ctx = JitCompiler::create_llvm_ctx();
     let module = try!(Module::from_bc(ctx, bitcode_path));
     JitCompiler::new_internal(ctx, module)
+  }
+
+  pub fn from_module(module: Module) -> Result<JitCompiler, String> {
+    JitCompiler::new_internal(JitCompiler::create_llvm_ctx(), module)
+  }
+
+  fn create_llvm_ctx() -> LLVMContextRef {
+    unsafe { core::LLVMContextCreate() }
   }
 
   fn new_internal(ctx: LLVMContextRef, mut module: Module) -> Result<JitCompiler, String> {
