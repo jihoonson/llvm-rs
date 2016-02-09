@@ -33,9 +33,11 @@ use llvm_sys::target_machine::LLVMCodeModel;
 use libc::{c_char, c_uint};
 
 pub use analysis::Verifier;
+pub use block::BasicBlock;
+pub use builder::{Builder, CastOp};
 pub use types::Ty;
-pub use value::{Function, GlobalValue, ToValue, Value, ValueIter, ValueRef};
-pub use builder::Builder;
+pub use value::{Arg, Function, GlobalValue, Predicate, ToValue, Value, ValueIter, ValueRef};
+
 
 use buffer::MemoryBuffer;
 use types::{FunctionTy, LLVMTy};
