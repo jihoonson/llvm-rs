@@ -250,7 +250,7 @@ impl JitCompiler {
     &self.f64_ty
   }
 
-  pub fn create_func_ty(&self, ret: &Ty, args: &[&Ty]) -> FunctionTy {
+  pub fn create_func_ty(ret: &Ty, args: &[&Ty]) -> FunctionTy {
     let ref_array = to_llvmref_array!(args, LLVMTypeRef);
 
     FunctionTy(unsafe {
@@ -322,7 +322,7 @@ impl JitCompiler {
                                param_tys: &[&Ty],
                                builder: Option<&Builder>)
                                -> Function {
-    let func_ty = self.create_func_ty(ret_ty, param_tys);
+    let func_ty = JitCompiler::create_func_ty(ret_ty, param_tys);
     let func = self.add_func(name, &func_ty);
 
     if let Some(b) = builder {
@@ -366,9 +366,43 @@ mod tests {
   }
 
   #[test]
-  fn test_jit() {
+  fn test_modules() {
     let jit = JitCompiler::new("test_jit").ok().unwrap();
-    jit.verify().unwrap();
+    let ctx = jit.context();
+
+    let module1 = Module::new(jit.context(), "internal");
+
+    let bld = &jit.new_builder();
+    let func_ty = &JitCompiler::create_func_ty(&u64::llvm_ty(ctx), &[&u64::llvm_ty(ctx)]);
+    let func = module1.add_func("test1", func_ty);
+
+    let entry = func.append("entry");
+    bld.position_at_end(&entry);
+    bld.create_ret(&func.arg(0).into());
+    func.dump();
+    func.verify().ok().expect("Function test is invalid");
+
+    assert!(jit.get_func("test1").is_none());
+    assert!(module1.get_func("test1").is_some());
+
+    let found_func = module1.get_func("test1").expect("test1 not found");
+    let found_fn_ptr_1 = unsafe { jit.get_func_ptr(&found_func).expect("test1 ptr not found (try 1)") };
+    assert!(found_fn_ptr_1.is_null() == true);
+
+    jit.add_module(&module1);
+    let found_fn_ptr_2 = unsafe { jit.get_func_ptr(&found_func).expect("test1 ptr not found (try 2)") };
+    assert!(found_fn_ptr_2.is_null() == false);
+
+    let equal_fn: fn(u64) -> u64 = unsafe { ::std::mem::transmute(found_fn_ptr_2) };
+    assert_eq!(19800401, equal_fn(19800401));
+
+    jit.remove_module(&module1);
+    let found_fn_ptr_3 = unsafe { jit.get_func_ptr(&found_func).expect("test1 ptr not found (try 3)") };
+    assert!(found_fn_ptr_3.is_null() == true);
+
+    jit.add_module(&module1);
+    let found_fn_ptr_4 = unsafe { jit.get_func_ptr(&found_func).expect("test1 ptr not found (try 4)") };
+    assert!(found_fn_ptr_4.is_null() == false);
   }
 
   #[test]

@@ -167,7 +167,7 @@ mod tests {
   fn test_function_ty() {
     let jit = JitCompiler::new("test2").ok().unwrap();
     let ctx = jit.context();
-    let prototype = jit.create_func_ty(&f64::llvm_ty(ctx),
+    let prototype = JitCompiler::create_func_ty(&f64::llvm_ty(ctx),
                                        &[&i8::llvm_ty(ctx), &i16::llvm_ty(ctx)]);
 
     assert_eq!(prototype.ret_type(), f64::llvm_ty(ctx));
