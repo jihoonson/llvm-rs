@@ -20,7 +20,6 @@ use std::mem;
 use std::ptr;
 
 use llvm_sys::core;
-use llvm_sys::prelude::LLVMTypeRef;
 use llvm_sys::execution_engine::{LLVMAddGlobalMapping, LLVMAddModule,
                                  LLVMCreateMCJITCompilerForModule, LLVMExecutionEngineRef,
                                  LLVMGetPointerToGlobal, LLVMLinkInMCJIT,
@@ -34,10 +33,10 @@ pub use analysis::Verifier;
 pub use block::BasicBlock;
 pub use builder::{Builder, CastOp};
 pub use module::Module;
-pub use types::Ty;
+pub use types::{FunctionTy, Ty};
 pub use value::{Arg, Function, GlobalValue, Predicate, ToValue, Value, ValueIter, ValueRef};
 
-use types::{FunctionTy, LLVMTy};
+use types::{LLVMTy};
 
 pub const JIT_OPT_LVEL: usize = 2;
 
@@ -250,17 +249,6 @@ impl JitCompiler {
     &self.f64_ty
   }
 
-  pub fn create_func_ty(ret: &Ty, args: &[&Ty]) -> FunctionTy {
-    let ref_array = to_llvmref_array!(args, LLVMTypeRef);
-
-    FunctionTy(unsafe {
-      core::LLVMFunctionType(ret.0,
-                             ref_array.as_ptr() as *mut LLVMTypeRef,
-                             args.len() as c_uint,
-                             0)
-    })
-  }
-
   pub fn get_const<T: ToValue>(&self, val: T) -> Value {
     val.to_value(self.ctx)
   }
@@ -322,15 +310,7 @@ impl JitCompiler {
                                param_tys: &[&Ty],
                                builder: Option<&Builder>)
                                -> Function {
-    let func_ty = JitCompiler::create_func_ty(ret_ty, param_tys);
-    let func = self.add_func(name, &func_ty);
-
-    if let Some(b) = builder {
-      let entry = func.append("entry");
-      b.position_at_end(&entry)
-    }
-
-    func
+    self.module.create_func_prototype(name, ret_ty, param_tys, builder)
   }
 
   /// Returns a pointer to the machine code for the raw function poionter.
@@ -375,7 +355,7 @@ mod tests {
     let module1 = Module::new(jit.context(), "internal");
 
     let bld = &jit.new_builder();
-    let func_ty = &JitCompiler::create_func_ty(&u64::llvm_ty(ctx), &[&u64::llvm_ty(ctx)]);
+    let func_ty = &FunctionTy::new(&u64::llvm_ty(ctx), &[&u64::llvm_ty(ctx)]);
     let func = module1.add_func("test1", func_ty);
 
     let entry = func.append("entry");

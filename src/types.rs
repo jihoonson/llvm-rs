@@ -83,6 +83,17 @@ impl_display!(FunctionTy, LLVMPrintTypeToString);
 impl_has_context!(FunctionTy, LLVMGetTypeContext);
 
 impl FunctionTy {
+  pub fn new(ret: &Ty, args: &[&Ty]) -> FunctionTy {
+    let ref_array = to_llvmref_array!(args, LLVMTypeRef);
+
+    FunctionTy(unsafe {
+      core::LLVMFunctionType(ret.0,
+                             ref_array.as_ptr() as *mut LLVMTypeRef,
+                             args.len() as c_uint,
+                             0)
+    })
+  }
+
   /// Returns the number of parameters this signature takes.
   pub fn num_params(&self) -> usize {
     unsafe { core::LLVMCountParamTypes(self.0) as usize }
@@ -146,7 +157,7 @@ impl LLVMTy for isize {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use super::super::JitCompiler;
+  use super::super::{JitCompiler};
 
   #[test]
   pub fn test_types() {
@@ -167,7 +178,7 @@ mod tests {
   fn test_function_ty() {
     let jit = JitCompiler::new("test2").ok().unwrap();
     let ctx = jit.context();
-    let prototype = JitCompiler::create_func_ty(&f64::llvm_ty(ctx),
+    let prototype = FunctionTy::new(&f64::llvm_ty(ctx),
                                        &[&i8::llvm_ty(ctx), &i16::llvm_ty(ctx)]);
 
     assert_eq!(prototype.ret_type(), f64::llvm_ty(ctx));

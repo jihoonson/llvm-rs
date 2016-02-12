@@ -7,7 +7,7 @@ use llvm_sys::linker;
 use llvm_sys::prelude::{LLVMContextRef, LLVMModuleRef};
 use llvm_sys::transforms::pass_manager_builder as pass;
 
-use super::{AddressSpace, LLVMRef};
+use super::{AddressSpace, Builder, LLVMRef};
 use buffer::MemoryBuffer;
 use analysis::Verifier;
 use value::{Function, GlobalValue, Value, ValueIter, ValueRef};
@@ -200,5 +200,23 @@ impl Module {
       let ty = core::LLVMGetNamedFunction(self.0, c_name);
       ::util::ret_nullable_ptr(ty)
     }
+  }
+
+  /// Returns the function after creating prototype and initializing the entry block
+  pub fn create_func_prototype(&self,
+                               name: &str,
+                               ret_ty: &Ty,
+                               param_tys: &[&Ty],
+                               builder: Option<&Builder>)
+                               -> Function {
+    let func_ty = FunctionTy::new(ret_ty, param_tys);
+    let func = self.add_func(name, &func_ty);
+
+    if let Some(b) = builder {
+      let entry = func.append("entry");
+      b.position_at_end(&entry)
+    }
+
+    func
   }
 }
