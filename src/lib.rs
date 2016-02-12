@@ -338,8 +338,14 @@ impl JitCompiler {
   /// This is marked as unsafe because the defined function signature and
   /// return could be different from their internal representation.
   pub unsafe fn get_func_ptr(&self, func: &Function) -> Option<*const ()> {
+
     let ptr: *const u8 = self.get_ptr_to_global(&func.into());
-    Some(mem::transmute(ptr))
+
+    if ptr.is_null() {
+      None
+    } else {
+      Some(mem::transmute(ptr))
+    }
   }
 }
 
@@ -382,8 +388,7 @@ mod tests {
     assert!(module1.get_func("test1").is_some());
 
     let found_func = module1.get_func("test1").expect("test1 not found");
-    let found_fn_ptr_1 = unsafe { jit.get_func_ptr(&found_func).expect("test1 ptr not found (try 1)") };
-    assert!(found_fn_ptr_1.is_null() == true);
+    assert!(unsafe { jit.get_func_ptr(&found_func).is_none()});
 
     jit.add_module(&module1);
     let found_fn_ptr_2 = unsafe { jit.get_func_ptr(&found_func).expect("test1 ptr not found (try 2)") };
@@ -393,8 +398,7 @@ mod tests {
     assert_eq!(19800401, equal_fn(19800401));
 
     jit.remove_module(&module1);
-    let found_fn_ptr_3 = unsafe { jit.get_func_ptr(&found_func).expect("test1 ptr not found (try 3)") };
-    assert!(found_fn_ptr_3.is_null() == true);
+    assert!(unsafe {jit.get_func_ptr(&found_func).is_none()});
 
     jit.add_module(&module1);
     let found_fn_ptr_4 = unsafe { jit.get_func_ptr(&found_func).expect("test1 ptr not found (try 4)") };
