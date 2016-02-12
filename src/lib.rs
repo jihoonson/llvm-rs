@@ -341,10 +341,6 @@ impl JitCompiler {
     let ptr: *const u8 = self.get_ptr_to_global(&func.into());
     Some(mem::transmute(ptr))
   }
-
-  pub fn delete_func(&self, func: &Function) {
-    unsafe { core::LLVMDeleteFunction(func.0) }
-  }
 }
 
 impl Drop for JitCompiler {

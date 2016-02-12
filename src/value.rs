@@ -310,6 +310,10 @@ impl Function {
   }
 }
 
+pub fn delete_func(func: &Function) {
+  unsafe { core::LLVMDeleteFunction(func.0) }
+}
+
 impl IntoIterator for Function {
   type Item = Arg;
   type IntoIter = ValueIter<Arg>;
