@@ -34,7 +34,7 @@ pub use block::BasicBlock;
 pub use builder::{Builder, CastOp};
 pub use module::Module;
 pub use types::{FunctionTy, Ty};
-pub use value::{Arg, Function, GlobalValue, Predicate, ToValue, Value, ValueIter, ValueRef};
+pub use value::{Arg, delete_func, Function, GlobalValue, Predicate, ToValue, Value, ValueIter, ValueRef};
 
 use types::{LLVMTy};
 
@@ -361,7 +361,6 @@ mod tests {
     let entry = func.append("entry");
     bld.position_at_end(&entry);
     bld.create_ret(&func.arg(0).into());
-    func.dump();
     func.verify().ok().expect("Function test is invalid");
 
     assert!(jit.get_func("test1").is_none());
@@ -381,8 +380,56 @@ mod tests {
     assert!(unsafe {jit.get_func_ptr(&found_func).is_none()});
 
     jit.add_module(&module1);
-    let found_fn_ptr_4 = unsafe { jit.get_func_ptr(&found_func).expect("test1 ptr not found (try 4)") };
+    let found_fn_ptr_4 = unsafe { jit.get_func_ptr(&found_func)
+      .expect("test1 ptr not found (try 4)") };
     assert!(found_fn_ptr_4.is_null() == false);
+  }
+
+  /// This test ensures the possibility of the the recompile approach by removing and
+  /// adding the module.
+  #[test]
+  fn test_func_recompile() {
+    let jit = JitCompiler::new("test_jit").ok().unwrap();
+    let ctx = jit.context();
+
+    let module1 = &Module::new(jit.context(), "internal");
+
+    let bld = &jit.new_builder();
+    {
+      let func_ty = &FunctionTy::new(&u64::llvm_ty(ctx), &[&u64::llvm_ty(ctx)]);
+      let func = module1.add_func("test1", func_ty);
+
+      let entry = func.append("entry");
+      bld.position_at_end(&entry);
+      bld.create_ret(&func.arg(0).into());
+
+      func.verify().ok().expect("Function test is invalid");
+
+      jit.add_module(module1);
+      let found_fn_ptr = unsafe { jit.get_func_ptr(&func).expect("test1 ptr not found (try 1)") };
+
+      let equal_fn: fn(u64) -> u64 = unsafe { ::std::mem::transmute(found_fn_ptr) };
+      assert_eq!(19800401, equal_fn(19800401));
+
+      jit.remove_module(module1);
+      delete_func(&func);
+      assert!(module1.get_func("test1").is_none());
+    }
+
+    {
+      let func_ty = &FunctionTy::new(&u64::llvm_ty(ctx), &[&u64::llvm_ty(ctx)]);
+      let func = module1.add_func("test1", func_ty);
+      let entry = func.append("entry");
+      bld.position_at_end(&entry);
+      bld.create_ret(&bld.create_add(&func.arg(0).into(), &1i64.to_value(ctx)));
+      func.verify().ok().expect("Function test is invalid");
+      func.dump();
+
+      jit.add_module(module1);
+      let found_fn_ptr = unsafe { jit.get_func_ptr(&func).expect("test1 ptr not found (try 2)") };
+      let plus_one_fn: fn(u64) -> u64 = unsafe { ::std::mem::transmute(found_fn_ptr) };
+      assert_eq!(19800402, plus_one_fn(19800401));
+    }
   }
 
   #[test]
