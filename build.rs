@@ -114,6 +114,7 @@ fn main() {
   }
 
   // Build the extra wrapper functions.
+  std::env::set_var("CXX", "clang++");
   std::env::set_var("CXXFLAGS", llvm_config("--cxxflags").trim());  
   gcc::Config::new()
     .cpp(true) // Switch to C++ library compilation.
