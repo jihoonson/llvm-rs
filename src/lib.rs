@@ -74,7 +74,7 @@ fn new_jit_ee(m: &Module, opt_lv: usize) -> Result<LLVMExecutionEngineRef, Strin
     let mut opts = new_mcjit_compiler_options(opt_lv);
     let opts_size = mem::size_of::<LLVMMCJITCompilerOptions>();
 
-    let ret = LLVMCreateMCJITCompilerForModule(&mut ee, m.0, &mut opts, opts_size as u64, &mut err);
+    let ret = LLVMCreateMCJITCompilerForModule(&mut ee, m.0, &mut opts, opts_size as usize, &mut err);
     llvm_ret!(ret, ee, err)
   }
 }
